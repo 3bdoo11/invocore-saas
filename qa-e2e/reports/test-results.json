@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-11-02T20:30:33.896Z",
+  "total": 13,
+  "passed": 13,
+  "failed": 0,
+  "testResults": [
+    {
+      "name": "Clean Blank-Slate Startup (Zero Dummy Client or Line Items)",
+      "passed": true,
+      "details": "Client: \"\", Tax: \"\", Items: 1, Row 1: \"\""
+    },
+    {
+      "name": "Saved Clients Directory Pre-seeded Dropdown & 1-Click Auto-Fill",
+      "passed": true,
+      "details": "Pre-seeded Options: 5, Auto-Filled: \"شركة زاد الكريم للمقاولات\", Cleared: \"\""
+    },
+    {
+      "name": "Viewport Overflow Check: Android (360x800)",
+      "passed": true,
+      "details": "scroll: 360px, client: 360px"
+    },
+    {
+      "name": "Viewport Overflow Check: iPhone (390x844)",
+      "passed": true,
+      "details": "scroll: 390px, client: 390px"
+    },
+    {
+      "name": "Viewport Overflow Check: Desktop (1440x900)",
+      "passed": true,
+      "details": "scroll: 1440px, client: 1440px"
+    },
+    {
+      "name": "No NaN or Invalid Math on Boundary Values",
+      "passed": true,
+      "details": "Zero NaN values in DOM"
+    },
+    {
+      "name": "Discount Math Clamping (Subtotal Cannot Go Negative)",
+      "passed": true,
+      "details": "No negative total"
+    },
+    {
+      "name": "Heavy Multi-Page Stress Test (135 Items Auto-Paginated to 9 Pages)",
+      "passed": true,
+      "details": "Detected multi-page layout: true"
+    },
+    {
+      "name": "Page Navigation & Page 2 Transition in 135-Item Invoice",
+      "passed": true,
+      "details": "Matches: [\"صفحة العميل\",\"صفحة)\",\"صفحة سند القبض (خاص بالفواتير الآج\",\"صفحة 2 من 9\",\"صفحة التالية (3 من 9) — الإجماليات\",\"صفحة الأخيرة\",\"صفحة 2 من 9\",\"صفحة 2 من 9\"]"
+    },
+    {
+      "name": "All 8 Companies Seamlessly Render 135 Items Without Memory Crash",
+      "passed": true,
+      "details": "Switched 8 companies: true"
+    },
+    {
+      "name": "Receipt Voucher Company Customization & Bank IBANs (Sharek & Autad)",
+      "passed": true,
+      "details": "Sharek SNB: true, Autad IBAN: true"
+    },
+    {
+      "name": "Public Client Viewer Lossless QR Decoding",
+      "passed": true,
+      "details": "Public invoice page rendered"
+    },
+    {
+      "name": "Zero Runtime Console / Page Errors",
+      "passed": true,
+      "details": "0 errors recorded"
+    }
+  ]
+}

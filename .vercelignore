@@ -1,0 +1,4 @@
+qa-automation-selenium/
+qa-e2e/
+target/
+.system_generated/

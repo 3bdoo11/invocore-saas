@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Saqr E-Invoicing Automated QA Test Suite" verbose="2" parallel="false">
+    <test name="End-to-End Regression &amp; Boundary Suite">
+        <classes>
+            <class name="tests.ResponsiveLayoutTest"/>
+            <class name="tests.InvoiceCalculationAndEdgeCasesTest"/>
+            <class name="tests.MultiCompanyAndPaginationTest"/>
+            <class name="tests.QrCodeAndReceiptVoucherTest"/>
+        </classes>
+    </test>
+</suite>

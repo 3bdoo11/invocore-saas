@@ -1,0 +1,8 @@
+pages/CatalogAndHistoryPage.class
+pages/InvoiceWorkspacePage.class
+tests/ResponsiveLayoutTest.class
+tests/MultiCompanyAndPaginationTest.class
+tests/QrCodeAndReceiptVoucherTest.class
+tests/InvoiceCalculationAndEdgeCasesTest.class
+base/BaseTest.class
+pages/PublicClientViewPage.class
