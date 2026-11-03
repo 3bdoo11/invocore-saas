@@ -188,17 +188,29 @@ export function App() {
   // Expose test helper methods on window for automated QA verification
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as unknown as { __saqrSetInvoice?: (inv: Partial<InvoiceData>) => void }).__saqrSetInvoice = (newInv) => {
+      const setInv = (newInv: Partial<InvoiceData>) => {
         setInvoice((prev) => ({ ...prev, ...newInv }));
       };
-      (window as unknown as { __saqrSetSeller?: (s: Partial<SellerInfo>) => void }).__saqrSetSeller = (newSeller) => {
+      const setSel = (newSeller: Partial<SellerInfo>) => {
         setSeller((prev) => ({ ...prev, ...newSeller }));
       };
-      (window as unknown as { __saqrSetDocPrintView?: (v: DocumentPrintView) => void }).__saqrSetDocPrintView = setDocPrintView;
-      (window as unknown as { __saqrSetCurrentPage?: (p: number) => void }).__saqrSetCurrentPage = setCurrentPage;
-      (window as unknown as { __saqrSetTemplateStyle?: (s: TemplateStyle) => void }).__saqrSetTemplateStyle = (s) => {
+      const setTemp = (s: TemplateStyle) => {
         handleQuickTemplateChange(s);
       };
+
+      const w = window as unknown as Record<string, unknown>;
+      w.__invocoreSetInvoice = setInv;
+      w.__invocoreSetSeller = setSel;
+      w.__invocoreSetDocPrintView = setDocPrintView;
+      w.__invocoreSetCurrentPage = setCurrentPage;
+      w.__invocoreSetTemplateStyle = setTemp;
+
+      // Legacy aliases for backward compatibility with automated test runners
+      w.__saqrSetInvoice = setInv;
+      w.__saqrSetSeller = setSel;
+      w.__saqrSetDocPrintView = setDocPrintView;
+      w.__saqrSetCurrentPage = setCurrentPage;
+      w.__saqrSetTemplateStyle = setTemp;
     }
   }, []);
 
@@ -218,7 +230,9 @@ export function App() {
   const [desktopLayoutMode, setDesktopLayoutMode] = useState<DesktopLayoutMode>(
     () => {
       try {
-        const saved = localStorage.getItem('saqr_desktop_layout_mode');
+        const saved =
+          localStorage.getItem('invocore_desktop_layout_mode') ||
+          localStorage.getItem('saqr_desktop_layout_mode');
         if (saved === 'split' || saved === 'input' || saved === 'preview') {
           return saved;
         }
@@ -230,7 +244,10 @@ export function App() {
   );
   const [panelWidth, setPanelWidth] = useState<number>(() => {
     try {
-      const saved = Number(localStorage.getItem('saqr_panel_width'));
+      const saved = Number(
+        localStorage.getItem('invocore_panel_width') ||
+          localStorage.getItem('saqr_panel_width')
+      );
       if (Number.isFinite(saved) && saved >= MIN_PANEL_WIDTH && saved <= 1400) {
         return saved;
       }
@@ -316,6 +333,7 @@ export function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('invocore_desktop_layout_mode', desktopLayoutMode);
       localStorage.setItem('saqr_desktop_layout_mode', desktopLayoutMode);
     } catch {
       // ignore
@@ -324,6 +342,7 @@ export function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem('invocore_panel_width', String(Math.round(panelWidth)));
       localStorage.setItem('saqr_panel_width', String(Math.round(panelWidth)));
     } catch {
       // ignore
@@ -930,7 +949,7 @@ export function App() {
   };
 
   /**
-   * Core helper to persist an invoice into `saqr_invoices` in localStorage without overwriting previous invoices.
+   * Core helper to persist an invoice into `saas_invoices` in localStorage without overwriting previous invoices.
    */
   const persistInvoiceToHistory = (
     targetInvoice: InvoiceData
@@ -1067,19 +1086,21 @@ export function App() {
           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between w-full min-w-0 gap-2.5">
             {/* RIGHT POD: Platform Brand & Active Company Identity Pill */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 w-full lg:w-auto min-w-0">
-              <div className="flex items-center gap-2.5 text-right min-w-0 w-full lg:w-auto">
-                <div
-                  style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
-                  className="w-9 h-9 rounded-xl border border-amber-400/40 flex items-center justify-center shrink-0 shadow-sm"
-                >
-                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+              <div className="flex items-center gap-3 text-right min-w-0 w-full lg:w-auto">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 border border-amber-400/50 flex items-center justify-center shrink-0 shadow-md">
+                  <Layers className="w-5 h-5 text-slate-950" />
                 </div>
                 <div>
-                  <h1 className="text-sm sm:text-[15px] font-black tracking-tight text-white leading-tight">
-                    منظومة الفوترة الإلكترونية السحابية
-                  </h1>
-                  <p className="text-[10.5px] text-slate-300 font-semibold truncate max-w-[230px] sm:max-w-[300px]">
-                    {seller.arabicName || 'منشأة الفوترة'} • ضريبي:{' '}
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-base sm:text-lg font-black tracking-tight text-white leading-none">
+                      Invo<span className="text-amber-400">Core</span>
+                    </h1>
+                    <span className="text-[10px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30">
+                      إنفو كور
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-medium truncate max-w-[230px] sm:max-w-[300px] mt-0.5">
+                    {seller.arabicName || 'منصة InvoCore الذكية'} • ضريبي:{' '}
                     <span className="num-tabular text-amber-300">
                       {seller.taxNumber || 'غير محدد'}
                     </span>
@@ -1095,7 +1116,7 @@ export function App() {
                     style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
                   />
                   <span className="text-xs font-black text-amber-300 truncate max-w-[150px]">
-                    {seller.arabicName || 'منشأتي'}
+                    {seller.arabicName || 'منصة InvoCore'}
                   </span>
                   <span className="text-[9.5px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-bold">
                     {seller.templateStyle === 'classic'
@@ -2833,7 +2854,7 @@ export function App() {
                     style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
                   />
                   <span className="text-[11px] font-black text-slate-800 truncate max-w-[150px]">
-                    {seller.arabicName || 'منشأتي'}
+                    {seller.arabicName || 'منصة InvoCore'}
                   </span>
                 </div>
 
@@ -3098,6 +3119,18 @@ export function App() {
             }}
           />
         )}
+
+        {/* Global SaaS Platform Footer */}
+        <footer className="no-print bg-[#0F172A] border-t border-slate-800 text-slate-400 text-xs py-2 px-4 flex flex-col sm:flex-row items-center justify-between gap-1.5 shrink-0 z-20">
+          <div className="flex items-center gap-2 font-medium">
+            <span className="font-extrabold text-white">InvoCore</span>
+            <span className="text-slate-600">|</span>
+            <span>منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)</span>
+          </div>
+          <div className="text-slate-400 font-mono text-[11px]" dir="ltr">
+            © 2026 InvoCore. All rights reserved.
+          </div>
+        </footer>
       </div>
 
       {/* Dedicated Top-Level Print Mount (Renders Selected Document(s) Sequentially on Print) */}

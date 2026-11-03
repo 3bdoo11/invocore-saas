@@ -9,7 +9,7 @@ import {
 } from '../types/invoice';
 
 export const DEFAULT_APP_TITLE =
-  'منظومة الفوترة الإلكترونية السحابية | Multi-Tenant SaaS Invoice Platform';
+  'InvoCore | Smart B2B E-Invoicing Platform';
 
 export const STORAGE_KEYS = {
   CATALOG: 'saas_catalog',
@@ -90,14 +90,14 @@ export const EMPTY_SELLER_INFO: SellerInfo = {
 };
 
 export const DEFAULT_SELLER_INFO: SellerInfo = {
-  arabicName: 'مؤسسة صقر للخدمات التجارية',
-  englishName: 'Saqr Commercial Services Est.',
-  legalType: 'مؤسسة تجارية',
+  arabicName: 'شركة إنفو كور للتقنية الذكية',
+  englishName: 'InvoCore Smart Technology Co.',
+  legalType: 'شركة ذات مسؤولية محدودة',
   crNumber: '1010000000',
   taxNumber: '300000000000003',
   address: 'المملكة العربية السعودية - الرياض',
   phone: '0500000000',
-  email: 'info@company.sa',
+  email: 'info@invocore.sa',
   bankName: 'البنك الأهلي السعودي',
   iban: 'SA0000000000000000000000',
   primaryColor: '#0F172A',

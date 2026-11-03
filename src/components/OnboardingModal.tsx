@@ -84,13 +84,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 backdrop-blur-md border border-white/20 text-amber-300">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>إعداد المنشأة والتهيئة الأولى (SaaS Onboarding)</span>
+                <span>إعداد المنشأة والتهيئة الأولى (InvoCore SaaS Onboarding)</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black">
-                مرحبًا بك في منصة الفوترة السحابية
+                مرحبًا بك في منصة InvoCore للفوترة الذكية
               </h2>
               <p className="text-xs text-slate-300">
-                قم بتهيئة بيانات منشأتك وشعارك المعتمد لتوليد فواتير وسندات ضريبية متوافقة مع هيئة الزكاة (ZATCA).
+                قم بتهيئة بيانات منشأتك وشعارك المعتمد في منصة InvoCore لتوليد فواتير وسندات ضريبية متوافقة مع هيئة الزكاة (ZATCA).
               </p>
             </div>
 
@@ -350,7 +350,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-black px-6 py-2.5 rounded-xl shadow-md hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>إطلاق المنصة وبدء الفوترة</span>
+              <span>إطلاق منصة InvoCore وبدء الفوترة</span>
             </button>
           )}
         </div>

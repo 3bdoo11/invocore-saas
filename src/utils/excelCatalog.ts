@@ -68,6 +68,9 @@ const PRICE_HEADER_PATTERNS = [
 
 const BANNER_AND_SUMMARY_PATTERNS = [
   'شركه واحه صقر العروبه',
+  'منصة invocore',
+  'invocore',
+  'انفو كور',
   'تقرير النظام',
   'قاعده بيانات الاصناف',
   'نموذج استيراد الاصناف',
@@ -806,7 +809,7 @@ export function downloadEmptyCatalogTemplate(): void {
 }
 
 /**
- * 3. Exports the Saved Invoices History (`saqr_invoices`) to a styled corporate RTL Excel sheet
+ * 3. Exports the Saved Invoices History (`saas_invoices`) to a styled corporate RTL Excel sheet
  * with a Gold/Amber bottom summary row calculating total Subtotal, Discount, VAT 15%, and Net Total.
  */
 export function exportInvoicesHistoryToExcel(invoices: InvoiceData[]): void {
@@ -864,7 +867,7 @@ export function exportInvoicesHistoryToExcel(invoices: InvoiceData[]): void {
   ];
 
   const sheetData: unknown[][] = [
-    ['شركة واحة صقر العروبة للتجارة والمقاولات - تقرير النظام', ...Array(colCount - 1).fill('')],
+    ['منصة InvoCore للفوترة الذكية - تقرير النظام', ...Array(colCount - 1).fill('')],
     [
       `تقرير سجل الفواتير الضريبية الصادرة — تاريخ التصدير: ${getTodayDateString()} — إجمالي الفواتير: ${invoices.length}`,
       ...Array(colCount - 1).fill(''),

@@ -6,7 +6,6 @@ import {
   Layers,
   MessageCircle,
   Printer,
-  ShieldCheck,
 } from 'lucide-react';
 import { InvoiceData, SellerInfo } from '../types/invoice';
 import {
@@ -111,12 +110,21 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
         <header className="sticky top-0 z-40 bg-[#0F172A] text-white border-b-2 border-[#B45309] shadow-lg">
           <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5 text-amber-400" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 border border-amber-400/40 flex items-center justify-center shrink-0 shadow-sm">
+                <Layers className="w-5 h-5 text-slate-950" />
               </div>
               <div>
-                <div className="text-sm font-extrabold leading-tight">
-                  {seller.arabicName}
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-black tracking-tight text-white leading-tight">
+                    Invo<span className="text-amber-400">Core</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30">
+                    إنفو كور
+                  </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <span className="text-xs font-bold text-slate-200">
+                    {seller.arabicName || 'منصة InvoCore'}
+                  </span>
                 </div>
                 <div className="text-[11px] text-slate-300 font-semibold num-tabular">
                   نسخة إلكترونية معتمدة — فاتورة ضريبية رقم #{invoice.invoiceNumber}{' '}
@@ -225,6 +233,20 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
             />
           </div>
         </main>
+
+        {/* Global Footer */}
+        <footer className="no-print bg-[#0F172A] border-t border-slate-800 text-slate-400 text-xs py-3 px-4 shrink-0 mt-auto">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white">InvoCore</span>
+              <span className="text-slate-600">|</span>
+              <span>منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)</span>
+            </div>
+            <div className="text-slate-400 font-mono text-[11px]" dir="ltr">
+              © 2026 InvoCore. All rights reserved.
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Dedicated Top-Level Print Mount (Renders ALL Pages Sequentially on Print) */}

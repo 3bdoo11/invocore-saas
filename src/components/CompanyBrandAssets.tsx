@@ -29,7 +29,7 @@ export const CompanyLogoSvg: React.FC<CompanyLogoProps> = ({
     );
   }
 
-  const initials = companyName ? companyName.trim().slice(0, 2) : 'ص';
+  const initials = companyName ? companyName.trim().slice(0, 2) : 'IC';
 
   return (
     <div

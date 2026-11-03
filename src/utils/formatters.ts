@@ -88,7 +88,7 @@ export function to24HourTimeInput(timeStr: string): string {
 }
 
 export const DEFAULT_APP_TITLE =
-  'منصة صقر للفوترة الإلكترونية الموحدة | Saqr E-Invoicing Hub';
+  'InvoCore | Smart B2B E-Invoicing Platform';
 
 /**
  * Sanitizes `document.title` for iPhone (iOS Safari) WhatsApp PDF sharing before calling `window.print()`.
@@ -132,7 +132,7 @@ export function buildWhatsAppInvoiceMessage(
   const totals = calculateInvoiceTotals(invoice);
   const formattedTotal = formatMoney(totals.finalTotal);
   const clientName = invoice.client.name?.trim() || 'العميل الكريم';
-  const companyName = sellerArabicName?.trim() || 'منصة صقر للفوترة الإلكترونية';
+  const companyName = sellerArabicName?.trim() || 'منصة InvoCore للفوترة الإلكترونية';
 
   const messageText = `مرحبًا، مرفق لكم الفاتورة الضريبية رقم (#${invoice.invoiceNumber}) الصادرة من ${companyName} لصالح ${clientName} بقيمة إجمالية ${formattedTotal} ر.س.\nلفتح وتحميل الفاتورة PDF مباشرة:\n${publicInvoiceUrl}`;
 

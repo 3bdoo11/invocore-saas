@@ -110,16 +110,20 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         style={{ backgroundColor: `${primaryColor}15`, color: primaryColor, borderColor: primaryColor }}
                         className="w-14 h-14 rounded-xl border flex items-center justify-center font-black text-xl shadow-xs"
                       >
-                        {seller.arabicName ? seller.arabicName.slice(0, 2) : 'صقر'}
+                        {seller.arabicName ? seller.arabicName.slice(0, 2) : 'IC'}
                       </div>
                     )}
                     <div>
                       <h1 style={{ color: primaryColor }} className="text-lg font-black leading-tight">
-                        {seller.arabicName || 'اسم الشركة أو المنشأة'}
+                        {seller.arabicName || 'InvoCore (إنفو كور)'}
                       </h1>
-                      {seller.englishName && (
+                      {seller.englishName ? (
                         <div className="text-[11px] font-bold text-slate-500 tracking-wide">
                           {seller.englishName}
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-bold text-slate-500 tracking-wide">
+                          InvoCore B2B Platform
                         </div>
                       )}
                       <div className="text-[10px] font-semibold text-slate-600 mt-1 space-x-2 space-x-reverse num-tabular">
@@ -155,7 +159,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                 <div className="grid grid-cols-12 items-center gap-3">
                   <div className="col-span-5 text-right">
                     <h1 style={{ color: primaryColor }} className="text-base font-black leading-snug">
-                      {seller.arabicName || 'اسم المنشأة التجارية'}
+                      {seller.arabicName || 'منصة InvoCore'}
                     </h1>
                     <div className="text-[10px] font-bold text-slate-600 num-tabular mt-0.5">
                       سجل تجاري: {seller.crNumber || '—'} | الرقم الضريبي: {seller.taxNumber || '—'}
@@ -171,7 +175,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         style={{ borderColor: primaryColor, color: primaryColor }}
                         className="w-12 h-12 rounded-full border-2 flex items-center justify-center font-black text-base mb-1"
                       >
-                        {seller.arabicName ? seller.arabicName.slice(0, 1) : 'ص'}
+                        {seller.arabicName ? seller.arabicName.slice(0, 1) : 'I'}
                       </div>
                     )}
                     <div className="border border-slate-800 rounded px-2 py-0.5 text-[11px] font-black bg-slate-100">
@@ -181,7 +185,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
 
                   <div dir="ltr" className="col-span-5 text-left">
                     <div className="text-xs font-black text-slate-800 leading-snug">
-                      {seller.englishName || 'TAX INVOICE'}
+                      {seller.englishName || 'InvoCore B2B Platform'}
                     </div>
                     <div className="text-[10px] font-bold text-slate-600 num-tabular mt-0.5">
                       INV: #{invoice.invoiceNumber} | Date: {invoice.date}
@@ -213,9 +217,11 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                   <div className="flex items-start gap-3">
                     <div className="text-left space-y-0.5">
                       <div style={{ color: primaryColor }} className="text-sm font-black">
-                        {seller.arabicName || 'المنشأة'}
+                        {seller.arabicName || 'منصة InvoCore'}
                       </div>
-                      <div className="text-[10.5px] font-bold text-slate-600">{seller.englishName}</div>
+                      <div className="text-[10.5px] font-bold text-slate-600">
+                        {seller.englishName || 'InvoCore Platform'}
+                      </div>
                       <div className="text-[10px] font-semibold text-slate-500 num-tabular">
                         س.ت: {seller.crNumber} | الرقم الضريبي: {seller.taxNumber}
                       </div>
@@ -376,7 +382,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
               {/* ------------------------------------------------------------- */}
               <footer className="pt-2 border-t border-slate-200 flex items-center justify-between">
                 <div className="text-[10px] font-semibold text-slate-500 space-y-0.5">
-                  <div>فاتورة ضريبية إلكترونية معتمدة صادرة من: <strong>{seller.arabicName}</strong></div>
+                  <div>فاتورة ضريبية إلكترونية معتمدة صادرة من: <strong>{seller.arabicName || 'منصة InvoCore'}</strong></div>
                   <div>هذا الرمز مشفر وفقاً لمتطلبات هيئة الزكاة والضريبة والجمارك (ZATCA)</div>
                 </div>
 

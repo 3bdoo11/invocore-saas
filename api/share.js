@@ -15,7 +15,7 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  const host = req.headers.host || 'saqr-invoice.vercel.app';
+  const host = req.headers.host || 'invocore.vercel.app';
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const baseUrl = `${proto}://${host}`;
 

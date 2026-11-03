@@ -301,7 +301,7 @@ export function encodePublicInvoiceUrl(
   const origin =
     typeof window !== 'undefined' && window.location?.origin
       ? window.location.origin
-      : 'https://saqr-invoice.vercel.app';
+      : 'https://invocore.vercel.app';
   return `${origin}/v/Z${bytesToBase64Url(compressed)}`;
 }
 

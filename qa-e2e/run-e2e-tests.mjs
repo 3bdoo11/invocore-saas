@@ -121,7 +121,7 @@ async function runTests() {
 
       // Click Finish Setup
       const finishBtn = Array.from(modal.querySelectorAll('button')).find((b) =>
-        b.innerText.includes('إطلاق المنصة وبدء الفوترة')
+        b.innerText.includes('إطلاق') && b.innerText.includes('وبدء الفوترة')
       );
       if (finishBtn) finishBtn.click();
       await new Promise((r) => setTimeout(r, 300));

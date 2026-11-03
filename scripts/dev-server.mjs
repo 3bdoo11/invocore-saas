@@ -149,7 +149,7 @@ function startFallbackDevServer() {
         },
       };
     </script>
-    <style id="saqr-custom-styles">
+    <style id="invocore-custom-styles">
 ${customCss}
     </style>
     <script type="importmap">

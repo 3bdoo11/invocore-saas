@@ -117,18 +117,16 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
                 style={{ backgroundColor: `${primaryColor}15`, color: primaryColor, borderColor: primaryColor }}
                 className="w-14 h-14 rounded-xl border flex items-center justify-center font-black text-xl shadow-xs"
               >
-                {seller.arabicName ? seller.arabicName.slice(0, 2) : 'سند'}
+                {seller.arabicName ? seller.arabicName.slice(0, 2) : 'IC'}
               </div>
             )}
             <div>
               <h1 style={{ color: primaryColor }} className="text-lg font-black leading-tight">
-                {seller.arabicName || 'اسم المنشأة'}
+                {seller.arabicName || 'منصة InvoCore'}
               </h1>
-              {seller.englishName && (
-                <div className="text-[11px] font-bold text-slate-500">
-                  {seller.englishName}
-                </div>
-              )}
+              <div className="text-[11px] font-bold text-slate-500">
+                {seller.englishName || 'InvoCore B2B Platform'}
+              </div>
               <div className="text-[10px] font-semibold text-slate-600 mt-1 space-x-2 space-x-reverse num-tabular">
                 {seller.crNumber && <span>س.ت: <strong>{seller.crNumber}</strong></span>}
                 {seller.taxNumber && <span>الرقم الضريبي: <strong>{seller.taxNumber}</strong></span>}
