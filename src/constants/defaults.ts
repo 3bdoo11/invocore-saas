@@ -1,24 +1,26 @@
 import {
   CatalogItem,
   ClientInfo,
-  CompanyTemplateId,
   InvoiceLineItem,
   PaymentMethod,
   SavedClient,
   SellerInfo,
+  TemplateStyle,
 } from '../types/invoice';
 
+export const DEFAULT_APP_TITLE =
+  'منظومة الفوترة الإلكترونية السحابية | Multi-Tenant SaaS Invoice Platform';
+
 export const STORAGE_KEYS = {
-  CATALOG: 'saqr_catalog',
-  INVOICES: 'saqr_invoices',
-  NEXT_INVOICE_NO: 'saqr_next_invoice_no',
-  SELLER_INFO: 'saqr_seller_info_v2',
-  COMPANIES: 'saqr_companies_v2',
-  SELECTED_COMPANY_ID: 'saqr_selected_company_id_v2',
-  SAVED_CLIENTS: 'saqr_clients',
+  CATALOG: 'saas_catalog',
+  INVOICES: 'saas_invoices',
+  NEXT_INVOICE_NO: 'saas_next_invoice_no',
+  SELLER_INFO: 'saas_company_settings_v1',
+  SAVED_CLIENTS: 'saas_clients',
+  ONBOARDING_COMPLETED: 'saas_onboarding_completed',
 } as const;
 
-export const INITIAL_INVOICE_NUMBER = 112463;
+export const INITIAL_INVOICE_NUMBER = 1001;
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
   'آجل',
@@ -26,6 +28,82 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   'تحويل بنكي',
   'شبكة',
 ];
+
+export interface TemplateStyleOption {
+  id: TemplateStyle;
+  name: string;
+  englishLabel: string;
+  description: string;
+  iconName: string;
+}
+
+export const TEMPLATE_STYLES: TemplateStyleOption[] = [
+  {
+    id: 'modern',
+    name: 'تصميم عصري متطور (Modern)',
+    englishLabel: 'Contemporary Cards & Vibrant Badges',
+    description: 'ترويسة عصرية أنيقة، بطاقات بيانات محددة، تدرجات احترافية لهوية المنشأة.',
+    iconName: 'Sparkles',
+  },
+  {
+    id: 'classic',
+    name: 'تصميم كلاسيكي تنفيذي (Classic)',
+    englishLabel: 'Executive Double Borders & Formal Grid',
+    description: 'إطار رسمي متكامل، ترويسة ثلاثية متوازنة، وتنسيق محاسبي للشركات والمؤسسات الكبرى.',
+    iconName: 'ShieldCheck',
+  },
+  {
+    id: 'minimalist',
+    name: 'تصميم بسيط ونظيف (Minimalist)',
+    englishLabel: 'Clean Hairline Lines & Minimalist Flow',
+    description: 'تركيز على البيانات بخطوط أفقية ناعمة، مساحات بيضاء واسعة، وإبراز واضح للمبالغ.',
+    iconName: 'Layers',
+  },
+];
+
+export const BRAND_COLOR_PRESETS = [
+  { label: 'كحلي ملكي (Royal Navy)', hex: '#0F172A', accent: '#D97706' },
+  { label: 'أزرق احترافي (Corporate Blue)', hex: '#1D4ED8', accent: '#3B82F6' },
+  { label: 'فيروزي حديث (Modern Teal)', hex: '#0D9488', accent: '#14B8A6' },
+  { label: 'أخضر زمردي (Emerald Green)', hex: '#059669', accent: '#10B981' },
+  { label: 'نيلي معاصر (Indigo)', hex: '#4F46E5', accent: '#818CF8' },
+  { label: 'أحمر قرمزي (Crimson ATC)', hex: '#DC2626', accent: '#991B1B' },
+  { label: 'عنبري دافئ (Warm Amber)', hex: '#B45309', accent: '#D97706' },
+  { label: 'رمادي حجري (Slate Industrial)', hex: '#334155', accent: '#64748B' },
+];
+
+export const EMPTY_SELLER_INFO: SellerInfo = {
+  arabicName: '',
+  englishName: '',
+  legalType: 'شركة ذات مسؤولية محدودة',
+  crNumber: '',
+  taxNumber: '',
+  address: '',
+  phone: '',
+  email: '',
+  bankName: '',
+  accountNumber: '',
+  iban: '',
+  primaryColor: '#0F172A',
+  accentColor: '#D97706',
+  templateStyle: 'modern',
+};
+
+export const DEFAULT_SELLER_INFO: SellerInfo = {
+  arabicName: 'مؤسسة صقر للخدمات التجارية',
+  englishName: 'Saqr Commercial Services Est.',
+  legalType: 'مؤسسة تجارية',
+  crNumber: '1010000000',
+  taxNumber: '300000000000003',
+  address: 'المملكة العربية السعودية - الرياض',
+  phone: '0500000000',
+  email: 'info@company.sa',
+  bankName: 'البنك الأهلي السعودي',
+  iban: 'SA0000000000000000000000',
+  primaryColor: '#0F172A',
+  accentColor: '#D97706',
+  templateStyle: 'modern',
+};
 
 export const CATEGORIZED_UNITS = [
   {
@@ -69,398 +147,25 @@ export const CATEGORIZED_UNITS = [
 ] as const;
 
 export const COMMON_UNITS: string[] = [
+  'وحدة',
+  'حبة',
+  'قطعة',
   'طن',
+  'كجم',
   'م3',
   'م2',
   'متر طولي',
-  'حبة',
-  'ربطة',
-  'لفة',
-  'كيس',
   'مقطوعية',
-  'رد',
-  'يومية',
-  'وحدة',
-  'م.ط',
-  'lm',
-  'LS',
-  'متر طولي (م.ط)',
-  'سم (سنتيمتر)',
-  'ملم (مليمتر)',
-  'كم (كيلومتر)',
-  'بوصة (إنش)',
-  'م2 (متر مربع)',
-  'م3 (متر مكعب)',
-  'لتر',
-  'جالون',
-  'كجم (كيلوجرام)',
-  'جرام',
-  'قطعة',
-  'كرتون',
-  'صفيحة',
-  'برميل',
-  'طقم',
-  'لوح',
-  'شحنة',
   'ساعة عمل',
+  'يومية',
   'شهر',
   'مستخلص',
+  'كرتون',
+  'كيس',
+  'ربطة',
+  'لفة',
+  'رد',
 ];
-
-export interface TemplateMetadata {
-  id: CompanyTemplateId;
-  companySlug: string;
-  name: string;
-  shortName: string;
-  englishLabel: string;
-  fontFamily: string;
-  fontLabel: string;
-  primaryColor: string;
-  accentColor: string;
-  lightBg: string;
-  description: string;
-  accentBadge: string;
-}
-
-export const COMPANY_TEMPLATES: TemplateMetadata[] = [
-  {
-    id: 1,
-    companySlug: 'wjdcom',
-    name: '1. شركة وجد كوم المحدودة (Wjdcom Co. Ltd)',
-    shortName: 'وجد كوم المحدودة',
-    englishLabel: 'Minimalist Accounting • 7-Col RTL • Top Balance Box',
-    fontFamily: "'Tajawal', sans-serif",
-    fontLabel: 'Tajawal',
-    primaryColor: '#1D4ED8',
-    accentColor: '#3B82F6',
-    lightBg: '#EFF6FF',
-    description:
-      'تصميم محاسبي نظيف بخطوط أفقية رفيعة وشعار W الدائري وإبراز الرصيد المتبقي في الأعلى.',
-    accentBadge: 'شركة وجد كوم • عفيف',
-  },
-  {
-    id: 2,
-    companySlug: 'kayanat',
-    name: '2. شركة كيانات للتجارة (KAYANAT)',
-    shortName: 'كيانات للتجارة',
-    englishLabel: 'Turquoise Modern • 8-Col Open Table • ZATCA Footer',
-    fontFamily: "'Readex Pro', sans-serif",
-    fontLabel: 'Readex Pro',
-    primaryColor: '#0D9488',
-    accentColor: '#14B8A6',
-    lightBg: '#F0FDFA',
-    description:
-      'شعار كيانات الفيروزي على اليمين، جدول مفتوح من 8 أعمدة مع الوحدة أسفل الكمية وملخص يساري.',
-    accentBadge: 'كيانات للتجارة • جدة',
-  },
-  {
-    id: 3,
-    companySlug: 'sharek-aldaem',
-    name: '3. مؤسسة الشريك الدائم للمقاولات (Al Sharek Al Daem Est.)',
-    shortName: 'الشريك الدائم للمقاولات',
-    englishLabel: 'Bilingual Header • ISO 9001 • Olive/Blue Contracting Table',
-    fontFamily: "'Cairo', sans-serif",
-    fontLabel: 'Cairo',
-    primaryColor: '#1E3A8A',
-    accentColor: '#EA580C',
-    lightBg: '#EFF6FF',
-    description:
-      'شعار المنزل البرتقالي مع شهادة ISO 9001 ورقم مورد الكهرباء SECO وجدول مقاولات وحساب البنك الأهلي.',
-    accentBadge: 'الشريك الدائم • الرياض',
-  },
-  {
-    id: 4,
-    companySlug: 'al-muzaini',
-    name: '4. مؤسسة المزيني للمقاولات العامة (AL-MUZAINI EST.)',
-    shortName: 'المزيني للمقاولات',
-    englishLabel: 'English LTR Corporate • Blue Header Strip • 3D M Logo',
-    fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-    fontLabel: 'IBM Plex Sans',
-    primaryColor: '#0284C7',
-    accentColor: '#DC2626',
-    lightBg: '#F0F9FF',
-    description:
-      'شعار M الهندسي ثلاثي الأبعاد، رمز QR علوي يمين، بلوك Bill To أزرق، وجدول LTR من 7 أعمدة.',
-    accentBadge: 'المزيني للمقاولات • جدة',
-  },
-  {
-    id: 5,
-    companySlug: 'al-monathem',
-    name: '5. شركة المنظم التجارية (Al Monathem Trading Co. - ATC)',
-    shortName: 'شركة المنظم ATC',
-    englishLabel: 'ATC Chevron • 7-Row Seller/Buyer Comparison Grid • Alinma',
-    fontFamily: "'Almarai', sans-serif",
-    fontLabel: 'Almarai',
-    primaryColor: '#0F766E',
-    accentColor: '#DC2626',
-    lightBg: '#F0FDFA',
-    description:
-      'زوايا تركوازية مع شعار ATC، جدول مقارنة المورد والعميل من 7 صفوف، كود الصنف، وحساب مصرف الإنماء.',
-    accentBadge: 'المنظم التجارية ATC • جدة',
-  },
-  {
-    id: 6,
-    companySlug: 'al-sindan',
-    name: '6. شركة السندان الماسي التجارية (AL SINDAN AL MASI)',
-    shortName: 'السندان الماسي التجارية',
-    englishLabel: 'Diamond Anvil Emblem • Gray Framed Bars • 6-Col LTR',
-    fontFamily: "'Cairo', sans-serif",
-    fontLabel: 'Cairo',
-    primaryColor: '#1E1B4B',
-    accentColor: '#3730A3',
-    lightBg: '#EEF2FF',
-    description:
-      'شعار السندان الماسي (بحري - صناعي - سلامة)، أشرطة بيانات رمادية مؤطرة، وجدول 6 أعمدة وتوقيع العميل والبائع.',
-    accentBadge: 'السندان الماسي • جدة',
-  },
-  {
-    id: 7,
-    companySlug: 'autad-alsarh',
-    name: '7. مؤسسة أوتاد الصرح التجارية (AUTAD AL-ALSARH)',
-    shortName: 'أوتاد الصرح التجارية',
-    englishLabel: 'Center QR Between Seller/Client Grids • 8-Col LTR • SNB',
-    fontFamily: "'Tajawal', sans-serif",
-    fontLabel: 'Tajawal',
-    primaryColor: '#1E3A8A',
-    accentColor: '#DC2626',
-    lightBg: '#EFF6FF',
-    description:
-      'شعار أوتاد البرجي، رمز QR مركزي بين شبكة بيانات الشركة وبيانات العميل التفصيلية، وجدول 8 أعمدة وبنك الأهلي.',
-    accentBadge: 'أوتاد الصرح • جدة',
-  },
-  {
-    id: 8,
-    companySlug: 'saqr',
-    name: '8. شركة واحة صقر العروبة للتجارة والمقاولات',
-    shortName: 'واحة صقر العروبة',
-    englishLabel: 'Executive Classic • Royal Navy & Gold • 6-Col RTL',
-    fontFamily: "'Cairo', sans-serif",
-    fontLabel: 'Cairo',
-    primaryColor: '#0F172A',
-    accentColor: '#B45309',
-    lightBg: '#FFFBEB',
-    description:
-      'القالب التنفيذي الكلاسيكي لشركة واحة صقر العروبة بترويسة ثلاثية الأعمدة وإطار كحلي وذهبي.',
-    accentBadge: 'واحة صقر العروبة • الرياض',
-  },
-];
-
-export const DEFAULT_COMPANIES: SellerInfo[] = [
-  {
-    id: 'wjdcom',
-    arabicName: 'شركة وجد كوم المحدودة',
-    legalType: 'شركة ذات مسؤولية محدودة',
-    crNumber: '1118001405',
-    taxNumber: '300936805800003',
-    englishName: 'Wjdcom Co. Ltd',
-    address: '7204، صفوان بن اسيد، الدانة، عفيف، 17532، المملكة العربية السعودية',
-    buildingNo: '7204',
-    streetName: 'صفوان بن اسيد',
-    district: 'الدانة',
-    city: 'عفيف',
-    postalCode: '17532',
-    phone: '0530817707',
-    email: 'wagab.elotaby@gmail.com',
-    templateId: 1,
-  },
-  {
-    id: 'kayanat',
-    arabicName: 'شركة كيانات للتجارة',
-    legalType: 'شركة ذات مسؤولية محدودة',
-    crNumber: '4030289104',
-    taxNumber: '311169397400003',
-    englishName: 'KAYANAT TRADING CO.',
-    address: 'هارون بن محمد بن اسحاق، 3632، جدة، حي الساحل، 22517، السعودية',
-    buildingNo: '3632',
-    streetName: 'هارون بن محمد بن اسحاق',
-    district: 'حي الساحل',
-    city: 'جدة',
-    postalCode: '22517',
-    templateId: 2,
-  },
-  {
-    id: 'sharek-aldaem',
-    arabicName: 'مؤسسة الشريك الدائم للمقاولات',
-    legalType: 'مؤسسة فردية',
-    crNumber: '1010227674',
-    taxNumber: '300082771500003',
-    englishName: 'Al Sharek Al Daem Est.',
-    address:
-      'Riyadh 11372 - P.O. Box: 300548 - Tel & Fax : 011 477 6969 C.C.: 205436 - Email: info@sharekaldaem.com',
-    city: 'الرياض',
-    postalCode: '11372',
-    phone: '011 477 6969',
-    email: 'info@sharekaldaem.com',
-    secoVendorId: '2008972',
-    bankName: 'SNB BANK',
-    accountNumber: '01400006214209',
-    iban: 'SA59 1000 0001 4000 0621 4209',
-    templateId: 3,
-  },
-  {
-    id: 'al-muzaini',
-    arabicName: 'مؤسسة المزيني للمقاولات العامة',
-    legalType: 'مؤسسة مقاولات عامة',
-    crNumber: '4030163660',
-    taxNumber: '300097581900003',
-    englishName: 'AL-MUZAINI EST. FOR GENERAL CONTRACTING',
-    address: 'العزيزية البلدية - جدة - المملكة العربية السعودية',
-    streetName: 'العزيزية البلدية',
-    city: 'جدة',
-    email: 'almuzainiest7@gmail.com',
-    templateId: 4,
-  },
-  {
-    id: 'al-monathem',
-    arabicName: 'شركة المنظم التجارية',
-    legalType: 'شركة ذات مسؤولية محدودة',
-    crNumber: '4030149146',
-    taxNumber: '311992382100003',
-    englishName: 'Al Monathem Trading Co.',
-    address: '3212 شارع البلدية - حي العزيزية - جدة 23334',
-    buildingNo: '3212',
-    streetName: 'شارع البلدية - حي العزيزية',
-    district: 'حي العزيزية',
-    city: 'جدة',
-    postalCode: '23334',
-    phone: '012 6688733',
-    mobile: '0530390072',
-    email: 'sales@aitsaudi.com',
-    bankName: 'مصرف الإنماء',
-    iban: 'SA 6005000068204939809000',
-    specialty:
-      'متخصصون في تصنيع وبيع مستلزمات البناء الخاصة بالمباني الجاهزة ومسبقة الصب المتعلقة بالرفع والتثبيت',
-    templateId: 5,
-  },
-  {
-    id: 'al-sindan',
-    arabicName: 'شركة السندان الماسي التجارية',
-    legalType: 'شركة تجارية',
-    crNumber: '4030171755',
-    taxNumber: '311481450800003',
-    englishName: 'AL SINDAN AL MASI TRADING CO.',
-    address: 'جدة - حي الثغر - شارع محمد فدا',
-    streetName: 'شارع محمد فدا',
-    district: 'حي الثغر',
-    city: 'جدة',
-    specialty: 'بحري - صناعي - سلامة | MARINE - INDUSTRIAL - SAFETY',
-    templateId: 6,
-  },
-  {
-    id: 'autad-alsarh',
-    arabicName: 'مؤسسة أوتاد الصرح التجارية',
-    legalType: 'مؤسسة تجارية',
-    crNumber: '4030606223',
-    taxNumber: '310686473700003',
-    englishName: 'Establishment AUTAD AL-ALSARH Commercial',
-    address:
-      'المملكة العربية السعودية - جدة شارع البلدية - مركز السحيلي 2 - ص.ب: 8401 - الرمز البريدي 23334 - جوال: 0508734766',
-    buildingNo: '2979',
-    streetName: 'البلدية',
-    district: 'حي العزيزية',
-    city: 'جدة',
-    postalCode: '23334',
-    additionalNo: '8401',
-    phone: '0508734766',
-    email: 'info@astsaudi.net',
-    bankName: 'الأهلي SNB',
-    iban: 'SA 64100000 01400031337701',
-    templateId: 7,
-  },
-  {
-    id: 'saqr',
-    arabicName: 'شركة واحة صقر العروبة للتجارة والمقاولات',
-    legalType: 'ذات مسئولية محدودة',
-    crNumber: '1185004129',
-    taxNumber: '301015558200003',
-    englishName:
-      'Oasis Falcon of Arabia Trading and Contracting Company - Limited Liability Company - CR No. 1185004129',
-    address:
-      'Kingdom of Saudi Arabia - Riyadh - Al-Fouta District - 3046 Imam Faisal Bin Turki',
-    buildingNo: '3046',
-    streetName: 'الإمام فيصل بن تركي',
-    district: 'حي الفوطة',
-    city: 'الرياض',
-    templateId: 8,
-  },
-];
-
-export const DEFAULT_SELLER_INFO: SellerInfo = DEFAULT_COMPANIES[0];
-
-export const DEFAULT_SAVED_CLIENTS: SavedClient[] = [
-  {
-    id: 'client-1',
-    name: 'شركة إنترناشونال بيلدينجز للمقاولات',
-    taxNumber: '314237681800003',
-    crNumber: '7051569643',
-    notes: 'سجل تجاري 7051569643',
-    address: 'جدة - حي السلامة - شارع قريش - مبنى 3190 - الرمز البريدي 23524',
-    buildingNo: '3190',
-    streetName: 'شارع قريش',
-    district: 'حي السلامة',
-    city: 'جدة',
-    postalCode: '23524',
-    additionalNo: '6173',
-    phone: '0566636486',
-  },
-  {
-    id: 'client-2',
-    name: 'شركة برافو للمقاولات - ذات مسؤولية محدودة',
-    taxNumber: '311234567800003',
-    crNumber: '1010345678',
-    notes: 'سجل تجاري 1010345678',
-    address: 'طريق الملك فهد، العليا، الرياض 12214',
-    buildingNo: '2450',
-    streetName: 'طريق الملك فهد',
-    district: 'العليا',
-    city: 'الرياض',
-    postalCode: '12214',
-    phone: '0501234567',
-  },
-  {
-    id: 'client-3',
-    name: 'شركة زاد الكريم للمقاولات',
-    taxNumber: '312071841900003',
-    crNumber: '4700018419',
-    notes: 'مدينة ينبع - ص.ب 46436',
-    address: 'عكرمة ابن خالد | حي الربيع | ص.ب 46436 | مدينة ينبع',
-    buildingNo: '46436',
-    streetName: 'عكرمة ابن خالد',
-    district: 'حي الربيع',
-    city: 'ينبع',
-    postalCode: '46436',
-    phone: '0540000000',
-  },
-  {
-    id: 'client-4',
-    name: 'مؤسسة الدولي الراقية للمقاولات',
-    taxNumber: '310456789000003',
-    crNumber: '4030456789',
-    notes: 'سجل تجاري 4030456789',
-    address: 'طريق المدينة، الفيصلية، جدة 23442',
-    buildingNo: '7890',
-    streetName: 'طريق المدينة',
-    district: 'الفيصلية',
-    city: 'جدة',
-    postalCode: '23442',
-    phone: '0559876543',
-  },
-];
-
-export const DEFAULT_CLIENT_INFO: ClientInfo = {
-  name: 'شركة إنترناشونال بيلدينجز للمقاولات',
-  taxNumber: '314237681800003',
-  crNumber: '7051569643',
-  notes: 'سجل تجاري 7051569643',
-  address: 'جدة - حي السلامة - شارع قريش - مبنى 3190 - الرمز البريدي 23524',
-  buildingNo: '3190',
-  streetName: 'شارع قريش',
-  district: 'حي السلامة',
-  city: 'جدة',
-  postalCode: '23524',
-  additionalNo: '6173',
-  phone: '0566636486',
-};
 
 export const EMPTY_CLIENT_INFO: ClientInfo = {
   name: '',
@@ -470,116 +175,16 @@ export const EMPTY_CLIENT_INFO: ClientInfo = {
   phone: '',
 };
 
+export const DEFAULT_SAVED_CLIENTS: SavedClient[] = [];
+
 export const DEFAULT_INITIAL_LINE_ITEMS: InvoiceLineItem[] = [
   {
     id: 'item-initial-1',
-    itemCode: '00126',
-    description: 'توريد وتركيب مواد ومستلزمات مشاريع هندسية',
-    unit: 'حبة',
-    qty: 30,
-    unitPrice: 95,
-  },
-  {
-    id: 'item-initial-2',
-    itemCode: '00124',
-    description: 'سلك تربيط مجلفن للمشاريع 22-6 كيلو',
-    unit: 'طن',
-    qty: 50,
-    unitPrice: 31,
-  },
-  {
-    id: 'item-initial-3',
-    itemCode: '48517',
-    description: 'شنبر حديد مسلح عالي السماكة',
-    unit: 'حبة',
-    qty: 50,
-    unitPrice: 25,
+    description: '',
+    unit: 'وحدة',
+    qty: 1,
+    unitPrice: 0,
   },
 ];
 
-export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [
-  {
-    id: 'cat-1',
-    name: 'سيرينا بروبان حريق ملابس',
-    unit: 'حبة',
-    defaultQuantity: 30,
-    unitPrice: 95,
-  },
-  {
-    id: 'cat-2',
-    name: 'سلك تربيط 22-6 كيلو',
-    unit: 'ربطة',
-    defaultQuantity: 50,
-    unitPrice: 31,
-  },
-  {
-    id: 'cat-3',
-    name: 'شنبر حديد',
-    unit: 'لفة',
-    defaultQuantity: 50,
-    unitPrice: 25,
-  },
-  {
-    id: 'cat-4',
-    name: 'زاوية حديد أسود مقاس 30*30*3 ملم*6 متر',
-    unit: 'حبة',
-    defaultQuantity: 100,
-    unitPrice: 41,
-  },
-  {
-    id: 'cat-5',
-    name: 'تيوب حديد مقاس 40*80*2 ملم*6 متر',
-    unit: 'حبة',
-    defaultQuantity: 25,
-    unitPrice: 69,
-  },
-  {
-    id: 'cat-6',
-    name: 'يو شانيل مقاس 100*150*6 ملم*6 متر',
-    unit: 'حبة',
-    defaultQuantity: 30,
-    unitPrice: 198,
-  },
-  {
-    id: 'cat-7',
-    name: 'خشب بلايوود احمر صيني 13 ط 18 مم 4*8',
-    unit: 'وحدة',
-    defaultQuantity: 500,
-    unitPrice: 120,
-  },
-  {
-    id: 'cat-8',
-    name: 'بلايوود مدهون مبروم بلكس 18 مم 13 طبقة 4*8',
-    unit: 'وحدة',
-    defaultQuantity: 400,
-    unitPrice: 115,
-  },
-  {
-    id: 'cat-9',
-    name: 'بالمتر المكعب توريد دفان',
-    unit: 'م3',
-    defaultQuantity: 4268,
-    unitPrice: 25,
-  },
-  {
-    id: 'cat-10',
-    name: 'توريد حديد تسليح سابك',
-    unit: 'طن',
-    defaultQuantity: 15,
-    unitPrice: 2850,
-  },
-  {
-    id: 'cat-11',
-    name: 'خرسانة جاهزة جهد 350 مقاوم',
-    unit: 'م3',
-    defaultQuantity: 120,
-    unitPrice: 265,
-  },
-  {
-    id: 'cat-12',
-    name: 'دفعة أخيرة من العقد الأساسي',
-    unit: 'مقطوعية',
-    defaultQuantity: 1,
-    unitPrice: 1956450,
-  },
-];
+export const DEFAULT_CATALOG_ITEMS: CatalogItem[] = [];

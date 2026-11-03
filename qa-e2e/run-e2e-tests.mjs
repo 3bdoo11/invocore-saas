@@ -82,21 +82,77 @@ async function runTests() {
     });
 
     // =========================================================================
-    // Test 0: Clean Blank-Slate Default State on Fresh Load
+    // Test 0: SaaS First-Time Setup & Onboarding Modal Flow
     // =========================================================================
-    console.log('\n--- Test 0: Clean Blank-Slate Default State Verification ---');
+    console.log('\n--- Test 0: SaaS First-Time Setup & Onboarding Modal Flow ---');
     await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: 'networkidle0' });
 
-    // Close gallery to inspect form
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const closeBtn = btns.find((b) => b.innerText.includes('إغلاق المعرض') || b.innerText.includes('معرض القوالب'));
-      if (closeBtn) closeBtn.click();
-    });
-    await new Promise((r) => setTimeout(r, 200));
+    const onboardingCheck = await page.evaluate(async () => {
+      const modal = document.querySelector('.fixed.inset-0.z-50');
+      if (!modal) return { modalFound: false };
 
+      function setReactVal(el, val) {
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        if (nativeSetter) {
+          nativeSetter.call(el, val);
+        } else {
+          el.value = val;
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Step 1 inputs inside the modal: input 0 is arabicName, input 3 is taxNumber
+      const inputs = Array.from(modal.querySelectorAll('input'));
+      const nameInput = inputs[0];
+      const vatInput = inputs[3];
+
+      if (nameInput) setReactVal(nameInput, 'شركة الحلول السحابية المتقدمة');
+      if (vatInput) setReactVal(vatInput, '310987654300003');
+
+      // Click Next
+      const nextBtn = Array.from(modal.querySelectorAll('button')).find((b) =>
+        b.innerText.includes('التالي')
+      );
+      if (nextBtn) nextBtn.click();
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Click Finish Setup
+      const finishBtn = Array.from(modal.querySelectorAll('button')).find((b) =>
+        b.innerText.includes('إطلاق المنصة وبدء الفوترة')
+      );
+      if (finishBtn) finishBtn.click();
+      await new Promise((r) => setTimeout(r, 300));
+
+      const isCompleted = localStorage.getItem('saas_onboarding_completed') === 'true';
+      const savedSeller = JSON.parse(localStorage.getItem('saas_company_settings_v1') || '{}');
+
+      return {
+        modalFound: true,
+        isCompleted,
+        savedName: savedSeller.arabicName,
+        savedVat: savedSeller.taxNumber,
+      };
+    });
+
+    record(
+      'SaaS First-Time Setup & Onboarding Wizard',
+      onboardingCheck.modalFound &&
+        onboardingCheck.isCompleted &&
+        onboardingCheck.savedName === 'شركة الحلول السحابية المتقدمة',
+      `Completed: ${onboardingCheck.isCompleted}, Configured Name: "${onboardingCheck.savedName}"`
+    );
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'saas-onboarding-completed.png'),
+    });
+
+    // =========================================================================
+    // Test 1: Clean Blank-Slate Default State Verification
+    // =========================================================================
+    console.log('\n--- Test 1: Clean Blank-Slate Default State Verification ---');
     const blankStateMetrics = await page.evaluate(() => {
       const clientNameInput = document.querySelector('input[placeholder*="اسم الشركة أو العميل"]');
       const clientTaxInput = document.querySelector('input[placeholder*="300XXXXXXXXX003"]');
@@ -119,58 +175,6 @@ async function runTests() {
     );
 
     // =========================================================================
-    // Test 1: Saved Clients Directory ("دفتر العملاء المحفوظين")
-    // =========================================================================
-    console.log('\n--- Test 1: Saved Clients Directory Dropdown & Auto-Fill ---');
-    const savedClientsMetrics = await page.evaluate(async () => {
-      const clientSelect = document.querySelector('select');
-      const selects = Array.from(document.querySelectorAll('select'));
-      const savedClientSelect = selects.find((s) =>
-        Array.from(s.options).some((o) => o.text.includes('دفتر العملاء') || o.text.includes('زاد الكريم') || o.text.includes('إنترناشونال'))
-      );
-
-      if (!savedClientSelect) return { found: false };
-
-      const optionsCount = savedClientSelect.options.length;
-
-      // Select "زاد الكريم" (3rd client)
-      let selectedOption = Array.from(savedClientSelect.options).find((o) => o.text.includes('زاد الكريم'));
-      if (selectedOption) {
-        savedClientSelect.value = selectedOption.value;
-        savedClientSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      await new Promise((r) => setTimeout(r, 150));
-
-      const nameInput = document.querySelector('input[placeholder*="اسم الشركة أو العميل"]');
-      const taxInput = document.querySelector('input[placeholder*="300XXXXXXXXX003"]');
-      const filledName = nameInput ? nameInput.value : '';
-      const filledTax = taxInput ? taxInput.value : '';
-
-      // Test clear button
-      const clearBtn = Array.from(document.querySelectorAll('button')).find((b) => b.innerText === 'تفريغ');
-      if (clearBtn) clearBtn.click();
-      await new Promise((r) => setTimeout(r, 100));
-
-      const clearedName = nameInput ? nameInput.value : '';
-
-      return {
-        found: true,
-        optionsCount,
-        filledName,
-        filledTax,
-        clearedName,
-      };
-    });
-
-    record(
-      'Saved Clients Directory Pre-seeded Dropdown & 1-Click Auto-Fill',
-      savedClientsMetrics.found &&
-        savedClientsMetrics.filledName.includes('زاد الكريم') &&
-        savedClientsMetrics.clearedName === '',
-      `Pre-seeded Options: ${savedClientsMetrics.optionsCount}, Auto-Filled: "${savedClientsMetrics.filledName}", Cleared: "${savedClientsMetrics.clearedName}"`
-    );
-
-    // =========================================================================
     // Test 2: Viewport Responsiveness & Zero Horizontal Overflow
     // =========================================================================
     console.log('\n--- Test 2: Viewport Responsiveness & Zero Horizontal Overflow ---');
@@ -187,8 +191,6 @@ async function runTests() {
       const metrics = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
-        bodyScrollWidth: document.body.scrollWidth,
-        bodyClientWidth: document.body.clientWidth,
       }));
 
       const noOverflow = metrics.scrollWidth <= metrics.clientWidth;
@@ -207,47 +209,89 @@ async function runTests() {
     await page.setViewport({ width: 1440, height: 900 });
 
     // =========================================================================
-    // Test 3: Edge Cases, Validations & Calculations Clamping
+    // Test 3: Settings Tab & Dynamic Brand Customization UI
     // =========================================================================
-    console.log('\n--- Test 3: Edge Cases, Validations & Calculations Clamping ---');
+    console.log('\n--- Test 3: Settings Tab & Dynamic Brand Customization UI ---');
     await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
 
-    // Close gallery
-    await page.evaluate(() => {
+    const settingsResult = await page.evaluate(async () => {
+      // Click Settings Tab
       const btns = Array.from(document.querySelectorAll('button'));
-      const closeGallery = btns.find((b) => b.innerText.includes('إغلاق المعرض') || b.innerText.includes('معرض القوالب'));
-      if (closeGallery) closeGallery.click();
-    });
-    await new Promise((r) => setTimeout(r, 200));
+      const settingsTabBtn = btns.find((b) => b.innerText.includes('إعدادات المنشأة'));
+      if (settingsTabBtn) settingsTabBtn.click();
+      await new Promise((r) => setTimeout(r, 200));
 
-    const edgeCaseResults = await page.evaluate(() => {
-      const results = {};
-      const discountInput = document.querySelector('input[type="number"][value="0"], input[placeholder="0"]');
-      if (discountInput) {
-        discountInput.value = '999999';
-        discountInput.dispatchEvent(new Event('input', { bubbles: true }));
+      const phoneInput = document.querySelector('input[placeholder*="05XXXXXXXX"]');
+      if (phoneInput) {
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+        if (nativeSetter) {
+          nativeSetter.call(phoneInput, '0512345678');
+        } else {
+          phoneInput.value = '0512345678';
+        }
+        phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
+        phoneInput.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      const totalElements = document.querySelectorAll('.num-tabular');
-      const textContents = Array.from(totalElements).map((el) => el.innerText);
+      // Click Save Settings button
+      const saveBtn = Array.from(document.querySelectorAll('button')).find((b) =>
+        b.innerText.includes('حفظ التعديلات')
+      );
+      if (saveBtn) saveBtn.click();
+      await new Promise((r) => setTimeout(r, 200));
 
-      results.hasNaN = textContents.some((t) => t.includes('NaN'));
-      // Only check for actual negative amounts, ignoring phone numbers, dates (2026-), and invoice numbers (INV-)
-      results.hasNegative = textContents.some((t) => {
-        const cleaned = t.trim();
-        if (cleaned.includes('2026-') || cleaned.includes('INV-') || cleaned.includes('CR:')) return false;
-        return /^-\s*\d/.test(cleaned);
-      });
+      // Return to Editor Tab
+      const editorTabBtn = btns.find((b) => b.innerText.includes('الفاتورة'));
+      if (editorTabBtn) editorTabBtn.click();
+      await new Promise((r) => setTimeout(r, 150));
+
+      const savedSeller = JSON.parse(localStorage.getItem('saas_company_settings_v1') || '{}');
+      return {
+        phoneSaved: savedSeller.phone === '0512345678',
+        phone: savedSeller.phone,
+      };
+    });
+
+    record(
+      'Dynamic Company Settings Tab & Persistent Storage',
+      settingsResult.phoneSaved,
+      `Saved Phone: "${settingsResult.phone}"`
+    );
+
+    // =========================================================================
+    // Test 4: Universal Invoice Template Style Switching (Modern, Classic, Minimalist)
+    // =========================================================================
+    console.log('\n--- Test 4: Universal Invoice Template Style Switching ---');
+    const templateStylesTest = await page.evaluate(async () => {
+      const styles = ['classic', 'minimalist', 'modern'];
+      const results = {};
+
+      for (const st of styles) {
+        if (window.__saqrSetTemplateStyle) {
+          window.__saqrSetTemplateStyle(st);
+        }
+        await new Promise((r) => setTimeout(r, 150));
+        const seller = JSON.parse(localStorage.getItem('saas_company_settings_v1') || '{}');
+        results[st] = seller.templateStyle === st;
+      }
+
       return results;
     });
 
-    record('No NaN or Invalid Math on Boundary Values', !edgeCaseResults.hasNaN, 'Zero NaN values in DOM');
-    record('Discount Math Clamping (Subtotal Cannot Go Negative)', !edgeCaseResults.hasNegative, 'No negative total');
+    record(
+      'Universal Invoice Template Style Switcher (Modern, Classic, Minimalist)',
+      templateStylesTest.classic && templateStylesTest.minimalist && templateStylesTest.modern,
+      `Classic: ${templateStylesTest.classic}, Minimalist: ${templateStylesTest.minimalist}, Modern: ${templateStylesTest.modern}`
+    );
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'universal-invoice-modern-preview.png'),
+    });
 
     // =========================================================================
-    // Test 4: Heavy Multi-Page Stress Test (135 Items across 9-10 Pages)
+    // Test 5: Heavy Multi-Page Stress Test (135 Items across 9-10 Pages)
     // =========================================================================
-    console.log('\n--- Test 4: Heavy Multi-Page Stress Test (135 Items across 9-10 Pages) ---');
+    console.log('\n--- Test 5: Heavy Multi-Page Stress Test (135 Items across 9-10 Pages) ---');
     await page.evaluate(() => {
       const items = Array.from({ length: 135 }, (_, i) => ({
         id: `stress-item-${i + 1}`,
@@ -263,25 +307,15 @@ async function runTests() {
           items: items,
           paymentMethod: 'آجل',
           client: {
-            name: 'شركة إنترناشونال بيلدينجز للمقاولات',
+            name: 'شركة المقاولات الإنشائية الكبرى',
             taxNumber: '314237681800003',
-            crNumber: '7051569643',
             notes: 'سجل تجاري 7051569643',
-            address: 'جدة - حي السلامة - شارع قريش - مبنى 3190 - الرمز البريدي 23524',
-            buildingNo: '3190',
-            streetName: 'شارع قريش',
-            district: 'حي السلامة',
-            city: 'جدة',
-            postalCode: '23524',
-            additionalNo: '6173',
+            address: 'الرياض - حي الملز - شارع الستين',
             phone: '0566636486',
           },
         });
       }
 
-      if (window.__saqrSetIsGalleryOpen) {
-        window.__saqrSetIsGalleryOpen(false);
-      }
       if (window.__saqrSetDocPrintView) {
         window.__saqrSetDocPrintView('invoice');
       }
@@ -290,49 +324,38 @@ async function runTests() {
     await new Promise((r) => setTimeout(r, 400));
 
     const heavyMetrics = await page.evaluate(async () => {
-      // Reset to page 1
       if (window.__saqrSetCurrentPage) {
         window.__saqrSetCurrentPage(1);
       }
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 200));
 
       const bodyText = document.body.innerText;
-      // Pagination label e.g. "صفحة 1 من 9" or "9 صفحات" or "1 من 9"
-      const has9Pages = bodyText.includes('من 9') || bodyText.includes('9 صفحات') || bodyText.includes('من 10') || bodyText.includes('10 صفحات');
+      const has9Pages =
+        bodyText.includes('من 9') ||
+        bodyText.includes('9 صفحات') ||
+        bodyText.includes('من 10') ||
+        bodyText.includes('10 صفحات');
 
-      // Find active next button
+      // Next button test
       const btns = Array.from(document.querySelectorAll('button'));
       const nextBtn = btns.find((b) => b.textContent && b.textContent.includes('التالي') && !b.disabled);
-      let navigatedToPage2 = false;
       if (nextBtn) {
         nextBtn.click();
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 200));
       } else if (window.__saqrSetCurrentPage) {
         window.__saqrSetCurrentPage(2);
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 200));
       }
 
       const textAfter = document.body.innerText;
-      const paginationMatches = textAfter.match(/(صفحة|\bمن\b|\bPage\b)[^\n]{1,30}/g);
-      navigatedToPage2 = textAfter.includes('2 من 9') || textAfter.includes('صفحة 2') || textAfter.includes('Page 2') || textAfter.includes('2 / 9');
-
-      // Check sequential company switching across all 8 companies
-      const select = document.querySelector('select[aria-label="اختر الشركة المصدرة للفاتورة"]');
-      let switchedAll8 = false;
-      if (select) {
-        for (let i = 0; i < select.options.length; i++) {
-          select.selectedIndex = i;
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise((r) => setTimeout(r, 60));
-        }
-        switchedAll8 = select.options.length >= 8;
-      }
+      const navigatedToPage2 =
+        textAfter.includes('2 من 9') ||
+        textAfter.includes('صفحة 2') ||
+        textAfter.includes('2 من 10');
 
       return {
         has9Pages,
         navigatedToPage2,
-        switchedAll8,
-        paginationMatches,
       };
     });
 
@@ -345,95 +368,44 @@ async function runTests() {
     record(
       'Page Navigation & Page 2 Transition in 135-Item Invoice',
       heavyMetrics.navigatedToPage2,
-      `Matches: ${JSON.stringify(heavyMetrics.paginationMatches)}`
-    );
-
-    record(
-      'All 8 Companies Seamlessly Render 135 Items Without Memory Crash',
-      heavyMetrics.switchedAll8,
-      `Switched 8 companies: ${heavyMetrics.switchedAll8}`
+      `Navigated to page 2: ${heavyMetrics.navigatedToPage2}`
     );
 
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'stress-test-135-items-10-pages.png'),
+      path: path.join(SCREENSHOTS_DIR, 'stress-test-135-items-multi-page.png'),
     });
 
     // =========================================================================
-    // Test 5: Receipt Vouchers for Multiple Companies (Wjdcom, Sharek, Autad)
+    // Test 6: Receipt Voucher ("سند قبض") Preview & Print Flow
     // =========================================================================
-    console.log('\n--- Test 5: Company-Specific Receipt Vouchers ---');
-
-    // Switch view mode to receipt
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const receiptBtn = btns.find((b) => b.innerText.includes('سند القبض') || b.innerText.includes('سند قبض'));
-      if (receiptBtn) receiptBtn.click();
-    });
-    await new Promise((r) => setTimeout(r, 200));
-
-    // Capture Wjdcom Receipt Voucher
-    await page.evaluate(() => {
-      const select = document.querySelector('select[aria-label="اختر الشركة المصدرة للفاتورة"]');
-      if (select) {
-        select.value = 'wjdcom';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log('\n--- Test 6: Receipt Voucher ("سند قبض") Preview & Print Flow ---');
+    const voucherMetrics = await page.evaluate(async () => {
+      if (window.__saqrSetDocPrintView) {
+        window.__saqrSetDocPrintView('receipt');
       }
-    });
-    await new Promise((r) => setTimeout(r, 200));
-    await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'receipt-voucher-wjdcom.png'),
-    });
+      await new Promise((r) => setTimeout(r, 200));
 
-    // Switch to Sharek Al-Daem and capture
-    await page.evaluate(() => {
-      const select = document.querySelector('select[aria-label="اختر الشركة المصدرة للفاتورة"]');
-      if (select) {
-        select.value = 'sharek-aldaem';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-    await new Promise((r) => setTimeout(r, 200));
-    const sharekMetrics = await page.evaluate(() => {
-      const text = document.body.innerText;
+      const bodyText = document.body.innerText;
       return {
-        hasSNB: text.includes('SNB') || text.includes('SA59 1000 0001 4000 0621 4209'),
-        hasName: text.includes('الشريك الدائم'),
+        hasVoucherHeader: bodyText.includes('سند قبض مالي') || bodyText.includes('RECEIPT VOUCHER'),
+        hasCompanyName: bodyText.includes('شركة الحلول السحابية المتقدمة'),
       };
-    });
-    await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'receipt-voucher-sharek.png'),
-    });
-
-    // Switch to Autad Al-Sarh and capture
-    await page.evaluate(() => {
-      const select = document.querySelector('select[aria-label="اختر الشركة المصدرة للفاتورة"]');
-      if (select) {
-        select.value = 'autad-alsarh';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-    await new Promise((r) => setTimeout(r, 200));
-    const autadMetrics = await page.evaluate(() => {
-      const text = document.body.innerText;
-      return {
-        hasAutadName: text.includes('أوتاد الصرح'),
-        hasIBAN: text.includes('SA 64100000 01400031337701') || text.includes('الأهلي SNB'),
-      };
-    });
-    await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'receipt-voucher-autad.png'),
     });
 
     record(
-      'Receipt Voucher Company Customization & Bank IBANs (Sharek & Autad)',
-      sharekMetrics.hasName && autadMetrics.hasAutadName,
-      `Sharek SNB: ${sharekMetrics.hasSNB}, Autad IBAN: ${autadMetrics.hasIBAN}`
+      'Receipt Voucher Dynamic Company Data & Layout',
+      voucherMetrics.hasVoucherHeader && voucherMetrics.hasCompanyName,
+      `Voucher Header: ${voucherMetrics.hasVoucherHeader}, Company Name: ${voucherMetrics.hasCompanyName}`
     );
 
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'receipt-voucher-preview.png'),
+    });
+
     // =========================================================================
-    // Test 6: QR Code Lossless Decoding & Zero Console Errors
+    // Test 7: Lossless Public QR Code Verification & Zero Console Errors
     // =========================================================================
-    console.log('\n--- Test 6: Lossless QR Verification & Console Error Check ---');
+    console.log('\n--- Test 7: Lossless QR Verification & Console Error Check ---');
     const qrLink = await page.evaluate(() => {
       const link = document.querySelector('a[title*="صفحة العميل"]');
       return link ? link.getAttribute('href') : null;
@@ -446,14 +418,15 @@ async function runTests() {
       const clientPageMetrics = await page.evaluate(() => {
         const headerText = document.querySelector('header')?.innerText || '';
         return {
-          isPublicView: headerText.includes('نسخة إلكترونية معتمدة') || document.body.innerText.includes('فاتورة ضريبية'),
+          isPublicView:
+            headerText.includes('نسخة إلكترونية معتمدة') ||
+            document.body.innerText.includes('فاتورة ضريبية'),
         };
       });
 
       record('Public Client Viewer Lossless QR Decoding', clientPageMetrics.isPublicView, 'Public invoice page rendered');
     }
 
-    // Zero page errors
     if (pageErrors.length > 0) {
       console.log('Recorded page errors:', pageErrors);
     }

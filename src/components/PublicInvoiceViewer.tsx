@@ -17,7 +17,7 @@ import {
   triggerWhatsAppInvoiceShare,
 } from '../utils/formatters';
 import { encodePublicInvoiceUrl } from '../utils/zatcaQr';
-import { InvoiceA4Sheet } from './InvoiceA4Sheet';
+import { UniversalInvoice } from './UniversalInvoice';
 
 interface PublicInvoiceViewerProps {
   decodedData: { invoice: InvoiceData; seller: SellerInfo } | null;
@@ -216,7 +216,7 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
                 : undefined
             }
           >
-            <InvoiceA4Sheet
+            <UniversalInvoice
               invoice={invoice}
               seller={seller}
               activePage={activePage}
@@ -229,7 +229,7 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
 
       {/* Dedicated Top-Level Print Mount (Renders ALL Pages Sequentially on Print) */}
       <div className="hidden print:block">
-        <InvoiceA4Sheet
+        <UniversalInvoice
           invoice={invoice}
           seller={seller}
           renderAllPages={true}

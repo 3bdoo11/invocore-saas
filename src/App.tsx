@@ -20,7 +20,6 @@ import {
   FileText,
   History,
   Layers,
-  LayoutGrid,
   MessageCircle,
   Percent,
   Plus,
@@ -39,15 +38,14 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import {
-  COMPANY_TEMPLATES,
   DEFAULT_CATALOG_ITEMS,
   EMPTY_CLIENT_INFO,
   INITIAL_INVOICE_NUMBER,
   PAYMENT_METHODS,
+  TEMPLATE_STYLES,
 } from './constants/defaults';
 import {
   CatalogItem,
-  CompanyTemplateId,
   DocumentPrintView,
   InvoiceData,
   InvoiceLineItem,
@@ -56,6 +54,7 @@ import {
   ReceiptVoucherData,
   SavedClient,
   SellerInfo,
+  TemplateStyle,
 } from './types/invoice';
 import {
   DEFAULT_APP_TITLE,
@@ -78,19 +77,18 @@ import {
 } from './utils/formatters';
 import {
   createFreshBlankInvoice,
+  isOnboardingCompleted,
   loadCatalogFromStorage,
-  loadCompaniesFromStorage,
   loadInvoicesFromStorage,
   loadNextInvoiceNumber,
   loadSavedClientsFromStorage,
   loadSellerFromStorage,
   saveCatalogToStorage,
-  saveCompaniesToStorage,
   saveInvoicesToStorage,
   saveNextInvoiceNumber,
   saveSavedClientsToStorage,
-  saveSelectedCompanyId,
   saveSellerToStorage,
+  setOnboardingCompleted,
 } from './utils/storage';
 import { numberToArabicTafqeet } from './utils/tafqeet';
 import {
@@ -105,17 +103,18 @@ import {
   ImportedCatalogItemData,
   parseInvoiceItemsExcelFile,
 } from './utils/excelCatalog';
-import { InvoiceA4Sheet } from './components/InvoiceA4Sheet';
+import { UniversalInvoice } from './components/UniversalInvoice';
 import { ReceiptVoucherA4Sheet } from './components/ReceiptVoucherA4Sheet';
 import { LineItemRow } from './components/LineItemRow';
 import { CatalogManagerTab } from './components/CatalogManagerTab';
 import { InvoicesHistoryTab } from './components/InvoicesHistoryTab';
+import { CompanySettingsTab } from './components/CompanySettingsTab';
 import { SellerSettingsModal } from './components/SellerSettingsModal';
+import { OnboardingModal } from './components/OnboardingModal';
 import { PublicInvoiceViewer } from './components/PublicInvoiceViewer';
 import { ShareInvoiceModal } from './components/ShareInvoiceModal';
-import { CompanyGalleryView } from './components/CompanyBrandAssets';
 
-type AdminTab = 'editor' | 'catalog' | 'history';
+type AdminTab = 'editor' | 'catalog' | 'history' | 'settings';
 type MobilePane = 'controls' | 'preview';
 type DesktopLayoutMode = 'split' | 'input' | 'preview';
 
@@ -162,11 +161,11 @@ export function App() {
     return loadNextInvoiceNumber();
   });
 
-  const [companies, setCompanies] = useState<SellerInfo[]>(() =>
-    loadCompaniesFromStorage()
-  );
   const [seller, setSeller] = useState<SellerInfo>(() =>
     loadSellerFromStorage()
+  );
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(
+    () => !isOnboardingCompleted()
   );
 
   const [invoice, setInvoice] = useState<InvoiceData>(() => {
@@ -192,14 +191,16 @@ export function App() {
       (window as unknown as { __saqrSetInvoice?: (inv: Partial<InvoiceData>) => void }).__saqrSetInvoice = (newInv) => {
         setInvoice((prev) => ({ ...prev, ...newInv }));
       };
+      (window as unknown as { __saqrSetSeller?: (s: Partial<SellerInfo>) => void }).__saqrSetSeller = (newSeller) => {
+        setSeller((prev) => ({ ...prev, ...newSeller }));
+      };
       (window as unknown as { __saqrSetDocPrintView?: (v: DocumentPrintView) => void }).__saqrSetDocPrintView = setDocPrintView;
       (window as unknown as { __saqrSetCurrentPage?: (p: number) => void }).__saqrSetCurrentPage = setCurrentPage;
-      (window as unknown as { __saqrSetIsGalleryOpen?: (open: boolean) => void }).__saqrSetIsGalleryOpen = setIsGalleryOpen;
+      (window as unknown as { __saqrSetTemplateStyle?: (s: TemplateStyle) => void }).__saqrSetTemplateStyle = (s) => {
+        handleQuickTemplateChange(s);
+      };
     }
   }, []);
-
-  // Default Startup View: Interactive Company Cards Gallery in the Preview Pane
-  const [isGalleryOpen, setIsGalleryOpen] = useState<boolean>(true);
 
   // Direct Invoice Excel File Input Ref
   const directInvoiceExcelInputRef = useRef<HTMLInputElement>(null);
@@ -287,14 +288,7 @@ export function App() {
 
   useEffect(() => {
     saveSellerToStorage(seller);
-    if (seller.id) {
-      saveSelectedCompanyId(seller.id);
-    }
   }, [seller]);
-
-  useEffect(() => {
-    saveCompaniesToStorage(companies);
-  }, [companies]);
 
   // Keep document.title set to Official Platform Title; only switch temporarily during print for iOS PDF filename
   useEffect(() => {
@@ -389,7 +383,7 @@ export function App() {
     const observer = new ResizeObserver(computeScale);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [publicInvoiceParam, desktopLayoutMode, panelWidth, mobilePane, isGalleryOpen]);
+  }, [publicInvoiceParam, desktopLayoutMode, panelWidth, mobilePane]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -468,38 +462,15 @@ export function App() {
   };
 
   // --- Handlers for Company Switching ---
-  const handleSwitchCompany = (selectedCompany: SellerInfo) => {
-    setSeller(selectedCompany);
-    setIsGalleryOpen(false);
-    setJustIssuedBanner(false);
-    if (selectedCompany.id) {
-      saveSelectedCompanyId(selectedCompany.id);
-    }
-    saveSellerToStorage(selectedCompany);
-    showToast(
-      `تم اختيار "${selectedCompany.arabicName}" — جميع بنود الفاتورة (${invoice.items.length}) محفوظة وجاهزة`
-    );
-  };
-
-  const handleQuickTemplateChange = (templateId: CompanyTemplateId) => {
-    const matchingCompany = companies.find((c) => c.templateId === templateId);
-    if (matchingCompany) {
-      handleSwitchCompany(matchingCompany);
-      return;
-    }
+  const handleQuickTemplateChange = (style: TemplateStyle) => {
     const updatedSeller: SellerInfo = {
       ...seller,
-      templateId,
+      templateStyle: style,
     };
     setSeller(updatedSeller);
-    setIsGalleryOpen(false);
-    setCompanies((prev) =>
-      prev.map((c) => (c.id === updatedSeller.id ? updatedSeller : c))
-    );
-    const tplName =
-      COMPANY_TEMPLATES.find((t) => t.id === templateId)?.name ||
-      `قالب ${templateId}`;
-    showToast(`تم تغيير تصميم الفاتورة وسند القبض إلى: ${tplName}`);
+    saveSellerToStorage(updatedSeller);
+    const tplObj = TEMPLATE_STYLES.find((t) => t.id === style);
+    showToast(`تم تغيير نمط الفاتورة إلى: ${tplObj?.name || style}`);
   };
 
   // --- Handlers for Invoice Editing ---
@@ -1078,10 +1049,6 @@ export function App() {
           ? totalPages
           : 1;
 
-  const activeTemplateMeta =
-    COMPANY_TEMPLATES.find((t) => t.id === (seller.templateId || 1)) ||
-    COMPANY_TEMPLATES[0];
-
   const isDeferredInvoice = invoice.paymentMethod === 'آجل';
   const effectiveDocPrintView: DocumentPrintView =
     isDeferredInvoice || docPrintView !== 'invoice'
@@ -1098,84 +1065,55 @@ export function App() {
         {/* Row 1: Main Navigation & Action Bar - Dark Navy #0F172A with 3 Clean Grouped Control Pods */}
         <header className="bg-[#0F172A] text-white border-b-2 border-[#B45309] px-3 sm:px-5 py-3 lg:py-2.5 shrink-0 shadow-lg z-30 w-full max-w-full min-w-0">
           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between w-full min-w-0 gap-2.5">
-            {/* RIGHT POD: Platform Brand & Interactive Active Company Selector Pill */}
+            {/* RIGHT POD: Platform Brand & Active Company Identity Pill */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 w-full lg:w-auto min-w-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsGalleryOpen(true);
-                  setMobilePane('preview');
-                }}
-                className="flex items-center gap-2.5 text-right group cursor-pointer rounded-xl px-1 py-1 hover:bg-white/5 transition-colors min-w-0 w-full lg:w-auto"
-                title="فتح معرض اختيار الشركة والقالب المعتمد"
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-700/20 border border-amber-400/40 group-hover:border-amber-400 flex items-center justify-center shrink-0 transition-colors">
+              <div className="flex items-center gap-2.5 text-right min-w-0 w-full lg:w-auto">
+                <div
+                  style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
+                  className="w-9 h-9 rounded-xl border border-amber-400/40 flex items-center justify-center shrink-0 shadow-sm"
+                >
                   <ShieldCheck className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
-                  <h1 className="text-sm sm:text-[15px] font-black tracking-tight text-white group-hover:text-amber-300 transition-colors leading-tight">
-                    منصة صقر للفوترة الإلكترونية
+                  <h1 className="text-sm sm:text-[15px] font-black tracking-tight text-white leading-tight">
+                    منظومة الفوترة الإلكترونية السحابية
                   </h1>
                   <p className="text-[10.5px] text-slate-300 font-semibold truncate max-w-[230px] sm:max-w-[300px]">
-                    {seller.arabicName} • ضريبي:{' '}
+                    {seller.arabicName || 'منشأة الفوترة'} • ضريبي:{' '}
                     <span className="num-tabular text-amber-300">
-                      {seller.taxNumber}
+                      {seller.taxNumber || 'غير محدد'}
                     </span>
                   </p>
                 </div>
-              </button>
+              </div>
 
-              {/* Interactive Active Company Selector Pill + Gallery Trigger + Settings Trigger */}
-              <div className="w-full lg:w-auto min-w-0 flex flex-wrap items-center justify-between gap-1.5 bg-slate-900/95 border border-amber-500/40 rounded-xl p-1 shadow-inner">
-                <div className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors">
-                  <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <select
-                    aria-label="اختر الشركة المصدرة للفاتورة"
-                    value={seller.id || ''}
-                    onChange={(e) => {
-                      const found = companies.find(
-                        (c) => c.id === e.target.value
-                      );
-                      if (found) handleSwitchCompany(found);
-                    }}
-                    className="bg-transparent text-xs font-extrabold text-amber-300 focus:outline-none cursor-pointer max-w-[155px] sm:max-w-[195px] truncate"
-                  >
-                    {companies.map((comp, idx) => (
-                      <option
-                        key={comp.id || idx}
-                        value={comp.id}
-                        className="bg-[#0F172A] text-white"
-                      >
-                        {idx + 1}. {comp.arabicName}
-                      </option>
-                    ))}
-                  </select>
+              {/* Active Company Pill & Settings Button */}
+              <div className="w-full lg:w-auto min-w-0 flex items-center justify-between gap-1.5 bg-slate-900/95 border border-amber-500/40 rounded-xl p-1 shadow-inner">
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <div
+                    className="w-3 h-3 rounded-full border border-white/30 shrink-0"
+                    style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
+                  />
+                  <span className="text-xs font-black text-amber-300 truncate max-w-[150px]">
+                    {seller.arabicName || 'منشأتي'}
+                  </span>
+                  <span className="text-[9.5px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-bold">
+                    {seller.templateStyle === 'classic'
+                      ? 'كلاسيكي'
+                      : seller.templateStyle === 'minimalist'
+                        ? 'مبسط'
+                        : 'عصري'}
+                  </span>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsGalleryOpen((prev) => !prev);
-                    setMobilePane('preview');
-                  }}
-                  className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
-                    isGalleryOpen
-                      ? 'bg-amber-400 text-slate-950 shadow-sm'
-                      : 'bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-400/30'
-                  }`}
-                  title="فتح معرض بطاقات الشركات والقوالب"
+                  onClick={() => setActiveTab('settings')}
+                  className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                  title="تخصيص بيانات المنشأة والشعار والألوان"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>تبديل الشركة / معرض القوالب ({companies.length})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsSellerModalOpen(true)}
-                  className="text-[11px] font-extrabold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-2.5 py-1 rounded-lg transition-colors shrink-0 cursor-pointer"
-                  title="إضافة أو تعديل بيانات الشركات والقوالب"
-                >
-                  إدارة
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>إعدادات المنشأة</span>
                 </button>
               </div>
             </div>
@@ -1192,12 +1130,9 @@ export function App() {
               >
                 <button
                   type="button"
-                  onClick={() => {
-                    setDocPrintView('invoice');
-                    setIsGalleryOpen(false);
-                  }}
+                  onClick={() => setDocPrintView('invoice')}
                   className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-                    effectiveDocPrintView === 'invoice' && !isGalleryOpen
+                    effectiveDocPrintView === 'invoice'
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
@@ -1210,12 +1145,9 @@ export function App() {
                   <>
                     <button
                       type="button"
-                      onClick={() => {
-                        setDocPrintView('receipt');
-                        setIsGalleryOpen(false);
-                      }}
+                      onClick={() => setDocPrintView('receipt')}
                       className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-                        effectiveDocPrintView === 'receipt' && !isGalleryOpen
+                        effectiveDocPrintView === 'receipt'
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }`}
@@ -1227,12 +1159,9 @@ export function App() {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setDocPrintView('both');
-                        setIsGalleryOpen(false);
-                      }}
+                      onClick={() => setDocPrintView('both')}
                       className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-                        effectiveDocPrintView === 'both' && !isGalleryOpen
+                        effectiveDocPrintView === 'both'
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }`}
@@ -1454,10 +1383,10 @@ export function App() {
               </div>
             </div>
 
-            {/* 3-Tab Navigation Header */}
+            {/* 4-Tab Navigation Header */}
             <div className="p-2 lg:p-2.5 bg-slate-50 border-b border-slate-200 shrink-0 w-full max-w-full">
               <div
-                className={`grid grid-cols-3 w-full gap-1 ${
+                className={`grid grid-cols-4 w-full gap-1 ${
                   desktopLayoutMode === 'input' ? 'max-w-4xl mx-auto' : ''
                 }`}
               >
@@ -1471,7 +1400,7 @@ export function App() {
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">بيانات الفاتورة والسند</span>
+                  <span className="truncate">الفاتورة</span>
                 </button>
 
                 <button
@@ -1484,7 +1413,7 @@ export function App() {
                   }`}
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">قاعدة الأصناف</span>
+                  <span className="truncate">الأصناف</span>
                   <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
                     {catalog.length}
                   </span>
@@ -1500,10 +1429,23 @@ export function App() {
                   }`}
                 >
                   <History className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">سجل الفواتير</span>
+                  <span className="truncate">السجل</span>
                   <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
                     {savedInvoices.length}
                   </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('settings')}
+                  className={`min-w-0 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-extrabold flex items-center justify-center gap-1 transition-all ${
+                    activeTab === 'settings'
+                      ? 'bg-[#0F172A] text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-200/70'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="truncate">إعدادات المنشأة</span>
                 </button>
               </div>
             </div>
@@ -1517,6 +1459,18 @@ export function App() {
                     : ''
                 }`}
               >
+                {activeTab === 'settings' && (
+                  <CompanySettingsTab
+                    seller={seller}
+                    onUpdateSeller={(updated) => {
+                      setSeller(updated);
+                    }}
+                    onSave={() => {
+                      saveSellerToStorage(seller);
+                      showToast('تم حفظ بيانات المنشأة والشعار والنمط بنجاح');
+                    }}
+                  />
+                )}
                 {activeTab === 'catalog' && (
                   <CatalogManagerTab
                     catalog={catalog}
@@ -1619,87 +1573,69 @@ export function App() {
                       </div>
                     )}
 
-                    {/* Section 0: Active Company & 8-Template Quick Switcher Card */}
-                    <section className="bg-gradient-to-l from-slate-900 to-[#0F172A] text-white rounded-xl p-3.5 space-y-2.5 border border-slate-800 shadow-sm">
+                    {/* Section 0: SaaS Company Brand Info & Template Style Switcher Card */}
+                    <section
+                      style={{ borderRightColor: seller.primaryColor || '#0F172A', borderRightWidth: '4px' }}
+                      className="bg-gradient-to-l from-slate-900 to-[#0F172A] text-white rounded-xl p-3.5 space-y-3 border border-slate-800 shadow-sm"
+                    >
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
-                          <h2 className="text-xs font-extrabold">
-                            الشركة المصدرة للفاتورة والقالب المعتمد
-                          </h2>
+                          <div>
+                            <h2 className="text-xs font-black">
+                              {seller.arabicName || 'منشأة الفوترة السحابية'}
+                            </h2>
+                            <p className="text-[10px] text-slate-300">
+                              {seller.englishName || 'SaaS Multi-Tenant Organization'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsGalleryOpen(true);
-                              setMobilePane('preview');
-                            }}
-                            className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                          >
-                            <LayoutGrid className="w-3.5 h-3.5" />
-                            <span>معرض البطاقات ({companies.length})</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsSellerModalOpen(true)}
-                            className="text-[11px] font-extrabold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            إدارة الشركات ←
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('settings')}
+                          className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>تعديل الهوية والشعار ←</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[10.5px] bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+                        <div>
+                          <span className="text-slate-400">الرقم الضريبي: </span>
+                          <span className="font-bold text-amber-300 num-tabular">{seller.taxNumber || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">السجل التجاري: </span>
+                          <span className="font-bold text-white num-tabular">{seller.crNumber || '—'}</span>
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div>
-                          <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
-                            اختر الشركة ({companies.length} شركات مسجلة — جميع البنود تنتقل تلقائياً):
-                          </label>
-                          <select
-                            value={seller.id || ''}
-                            onChange={(e) => {
-                              const found = companies.find(
-                                (c) => c.id === e.target.value
-                              );
-                              if (found) handleSwitchCompany(found);
-                            }}
-                            className="w-full rounded-lg bg-slate-800 border border-slate-700 text-white px-2.5 py-1.5 text-xs font-bold focus:border-amber-400 outline-none"
-                          >
-                            {companies.map((comp, idx) => (
-                              <option key={comp.id || idx} value={comp.id}>
-                                {idx + 1}. {comp.arabicName} — ({comp.englishName})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
-                            تبديل سريع بين القوالب الـ 8 ({activeTemplateMeta.shortName}):
-                          </label>
-                          <div className="grid grid-cols-4 gap-1">
-                            {COMPANY_TEMPLATES.map((tpl) => {
-                              const isSelected =
-                                (seller.templateId || 1) === tpl.id && !isGalleryOpen;
-                              return (
-                                <button
-                                  key={tpl.id}
-                                  type="button"
-                                  onClick={() =>
-                                    handleQuickTemplateChange(tpl.id)
-                                  }
-                                  className={`py-1.5 px-1 rounded-lg text-[10.5px] font-extrabold transition-all truncate cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-amber-400 text-slate-950 shadow-sm'
-                                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                                  }`}
-                                  title={`${tpl.name} — ${tpl.description}`}
-                                >
-                                  {tpl.id}. {tpl.shortName}
-                                </button>
-                              );
-                            })}
-                          </div>
+                      <div>
+                        <label className="block text-[10.5px] font-bold text-slate-300 mb-1.5">
+                          نمط تصميم القالب المعتمد (Template Style):
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {TEMPLATE_STYLES.map((tpl) => {
+                            const isSelected = (seller.templateStyle || 'modern') === tpl.id;
+                            return (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => handleQuickTemplateChange(tpl.id)}
+                                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer flex flex-col items-center justify-center text-center ${
+                                  isSelected
+                                    ? 'bg-amber-400 text-slate-950 shadow-sm'
+                                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                }`}
+                              >
+                                <span>{tpl.name}</span>
+                                <span className={`text-[9px] font-normal ${isSelected ? 'text-slate-800' : 'text-slate-400'}`}>
+                                  {tpl.englishLabel}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </section>
@@ -1973,7 +1909,6 @@ export function App() {
                                 });
                                 if (newPm === 'آجل') {
                                   setDocPrintView('both');
-                                  setIsGalleryOpen(false);
                                 } else {
                                   setDocPrintView('invoice');
                                 }
@@ -2620,7 +2555,6 @@ export function App() {
                               type="button"
                               onClick={() => {
                                 setDocPrintView('receipt');
-                                setIsGalleryOpen(false);
                               }}
                               className={`text-[10.5px] font-extrabold px-2 py-0.5 rounded-lg transition-colors ${
                                 effectiveDocPrintView === 'receipt'
@@ -2634,7 +2568,6 @@ export function App() {
                               type="button"
                               onClick={() => {
                                 setDocPrintView('both');
-                                setIsGalleryOpen(false);
                               }}
                               className={`text-[10.5px] font-extrabold px-2 py-0.5 rounded-lg transition-colors ${
                                 effectiveDocPrintView === 'both'
@@ -2655,7 +2588,6 @@ export function App() {
                             onChange={(e) => {
                               if (e.target.checked) {
                                 setDocPrintView('both');
-                                setIsGalleryOpen(false);
                               } else {
                                 setDocPrintView('invoice');
                               }
@@ -2891,188 +2823,164 @@ export function App() {
               mobilePane === 'controls' ? 'hidden' : 'flex'
             } ${desktopLayoutMode === 'input' ? 'lg:hidden' : 'lg:flex'}`}
           >
-            {/* Row 2: Clean Sub-Header above the Preview Pane (Right: Company Quick-Switch Strip | Left/Center: Pagination + Zoom) */}
+            {/* Row 2: Sub-Header above the Preview Pane (Right: SaaS Brand & Style Switcher | Left/Center: Pagination + Zoom) */}
             <div className="bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
-              {/* Right: Clean Horizontal Scrollable Strip of Company Quick-Switch Cards */}
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
-                <button
-                  type="button"
-                  onClick={() => setIsGalleryOpen((prev) => !prev)}
-                  className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-1.5 rounded-lg shrink-0 transition-all cursor-pointer ${
-                    isGalleryOpen
-                      ? 'bg-[#0F172A] text-amber-300 shadow-xs'
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300'
-                  }`}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>
-                    {isGalleryOpen ? 'إغلاق المعرض' : 'معرض البطاقات'}
+              {/* Right: SaaS Organization & Template Style Badges */}
+              <div className="flex items-center gap-2 overflow-x-auto max-w-full py-0.5">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                  <div
+                    className="w-3 h-3 rounded-full border border-slate-300 shrink-0"
+                    style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
+                  />
+                  <span className="text-[11px] font-black text-slate-800 truncate max-w-[150px]">
+                    {seller.arabicName || 'منشأتي'}
                   </span>
-                </button>
+                </div>
 
-                <div className="w-[1px] h-4 bg-slate-300 shrink-0 mx-0.5" />
-
-                {companies.map((comp) => {
-                  const isActive = !isGalleryOpen && comp.id === seller.id;
-                  return (
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  {TEMPLATE_STYLES.map((t) => (
                     <button
-                      key={comp.id}
+                      key={t.id}
                       type="button"
-                      onClick={() => handleSwitchCompany(comp)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-extrabold shrink-0 transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-[#0F172A] text-amber-400 shadow-xs border border-[#0F172A]'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                      onClick={() => handleQuickTemplateChange(t.id)}
+                      className={`px-2 py-1 rounded text-[10.5px] font-bold transition-all cursor-pointer ${
+                        (seller.templateStyle || 'modern') === t.id
+                          ? 'bg-[#0F172A] text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                       }`}
                     >
-                      <span className="truncate max-w-[145px]">
-                        {comp.arabicName}
-                      </span>
+                      {t.name}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
 
               {/* Left/Center: Page Navigation (السابق | صفحة X من Y | التالي) + Zoom Controls (100% | ملائمة) */}
-              {!isGalleryOpen && (
-                <div className="flex items-center gap-2 flex-wrap mr-auto">
-                  {effectiveDocPrintView !== 'receipt' && (
-                    <div className="flex items-center gap-1 bg-slate-100 border border-slate-200/90 p-1 rounded-xl">
-                      {previewViewMode === 'single' && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={currentPage <= 1}
-                            onClick={() =>
-                              setCurrentPage((prev) => Math.max(1, prev - 1))
-                            }
-                            className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
-                          >
-                            <ChevronRight className="w-3.5 h-3.5" />
-                            <span>السابق</span>
-                          </button>
-
-                          <span className="text-[11px] font-extrabold text-slate-800 px-2 num-tabular">
-                            صفحة {currentPage} من {totalPages}
-                          </span>
-
-                          <button
-                            type="button"
-                            disabled={currentPage >= totalPages}
-                            onClick={() =>
-                              setCurrentPage((prev) =>
-                                Math.min(totalPages, prev + 1)
-                              )
-                            }
-                            className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
-                          >
-                            <span>التالي</span>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                          </button>
-
-                          <div className="w-[1px] h-4 bg-slate-300 mx-0.5" />
-                        </>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreviewViewMode((prev) =>
-                            prev === 'single' ? 'all' : 'single'
-                          )
-                        }
-                        className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          previewViewMode === 'all'
-                            ? 'bg-[#B45309] text-white shadow-2xs'
-                            : 'bg-white text-[#0F172A] hover:bg-amber-50 shadow-2xs'
-                        }`}
-                      >
-                        <Layers className="w-3.5 h-3.5" />
-                        <span>
-                          {previewViewMode === 'single'
-                            ? `كل الصفحات (${totalPages})`
-                            : 'صفحة بصفحة'}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Zoom Controls (100% | ملائمة) */}
+              <div className="flex items-center gap-2 flex-wrap mr-auto">
+                {effectiveDocPrintView !== 'receipt' && (
                   <div className="flex items-center gap-1 bg-slate-100 border border-slate-200/90 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setZoomMode((prev) => {
-                          const cur = prev === 'fit' ? autoFitScale : prev;
-                          return Math.max(0.5, Number((cur - 0.1).toFixed(2)));
-                        })
-                      }
-                      className="p-1 rounded-lg bg-white hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      title="تصغير المعاينة"
-                    >
-                      <ZoomOut className="w-3.5 h-3.5" />
-                    </button>
+                    {previewViewMode === 'single' && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={currentPage <= 1}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(1, prev - 1))
+                          }
+                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                          <span>السابق</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setZoomMode(1)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-extrabold num-tabular transition-colors cursor-pointer ${
-                        zoomMode === 1
-                          ? 'bg-[#0F172A] text-white'
-                          : 'bg-white text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      100%
-                    </button>
+                        <span className="text-[11px] font-extrabold text-slate-800 px-2 num-tabular">
+                          صفحة {currentPage} من {totalPages}
+                        </span>
 
-                    <button
-                      type="button"
-                      onClick={() => setZoomMode('fit')}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-extrabold num-tabular transition-colors cursor-pointer ${
-                        zoomMode === 'fit'
-                          ? 'bg-[#0F172A] text-white'
-                          : 'bg-white text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      ملائمة ({Math.round(effectiveScale * 100)}%)
-                    </button>
+                        <button
+                          type="button"
+                          disabled={currentPage >= totalPages}
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(totalPages, prev + 1)
+                            )
+                          }
+                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <span>التالي</span>
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-slate-300 mx-0.5" />
+                      </>
+                    )}
 
                     <button
                       type="button"
                       onClick={() =>
-                        setZoomMode((prev) => {
-                          const cur = prev === 'fit' ? autoFitScale : prev;
-                          return Math.min(1.25, Number((cur + 0.1).toFixed(2)));
-                        })
+                        setPreviewViewMode((prev) =>
+                          prev === 'single' ? 'all' : 'single'
+                        )
                       }
-                      className="p-1 rounded-lg bg-white hover:bg-slate-200 text-slate-700 cursor-pointer"
-                      title="تكبير المعاينة"
+                      className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        previewViewMode === 'all'
+                          ? 'bg-[#B45309] text-white shadow-2xs'
+                          : 'bg-white text-[#0F172A] hover:bg-amber-50 shadow-2xs'
+                      }`}
                     >
-                      <ZoomIn className="w-3.5 h-3.5" />
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>
+                        {previewViewMode === 'single'
+                          ? `كل الصفحات (${totalPages})`
+                          : 'صفحة بصفحة'}
+                      </span>
                     </button>
                   </div>
+                )}
+
+                {/* Zoom Controls (100% | ملائمة) */}
+                <div className="flex items-center gap-1 bg-slate-100 border border-slate-200/90 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomMode((prev) => {
+                        const cur = prev === 'fit' ? autoFitScale : prev;
+                        return Math.max(0.5, Number((cur - 0.1).toFixed(2)));
+                      })
+                    }
+                    className="p-1 rounded-lg bg-white hover:bg-slate-200 text-slate-700 cursor-pointer"
+                    title="تصغير المعاينة"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setZoomMode(1)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-extrabold num-tabular transition-colors cursor-pointer ${
+                      zoomMode === 1
+                        ? 'bg-[#0F172A] text-white'
+                        : 'bg-white text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    100%
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setZoomMode('fit')}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-extrabold num-tabular transition-colors cursor-pointer ${
+                      zoomMode === 'fit'
+                        ? 'bg-[#0F172A] text-white'
+                        : 'bg-white text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    ملائمة ({Math.round(effectiveScale * 100)}%)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomMode((prev) => {
+                        const cur = prev === 'fit' ? autoFitScale : prev;
+                        return Math.min(1.25, Number((cur + 0.1).toFixed(2)));
+                      })
+                    }
+                    className="p-1 rounded-lg bg-white hover:bg-slate-200 text-slate-700 cursor-pointer"
+                    title="تكبير المعاينة"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Main Scrollable Content: either Interactive Company Gallery OR Live A4 Preview */}
-            {isGalleryOpen ? (
-              <div className="flex-1 overflow-y-auto">
-                <CompanyGalleryView
-                  companies={companies}
-                  activeCompanyId={seller.id}
-                  itemsCount={invoice.items.length}
-                  clientName={invoice.client.name}
-                  onSelectCompany={handleSwitchCompany}
-                  onOpenCompanySettings={() => setIsSellerModalOpen(true)}
-                />
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0 w-full max-w-full overflow-auto py-4 lg:py-6 px-2 lg:px-4 flex flex-col items-center">
-               <div
-                 className="shrink-0 max-w-full"
-                 style={{ width: `${A4_PIXEL_WIDTH * effectiveScale}px`, overflowX: 'clip' }}
-               >
+            {/* Main Scrollable Content: Live A4 Preview */}
+            <div className="flex-1 min-w-0 w-full max-w-full overflow-auto py-4 lg:py-6 px-2 lg:px-4 flex flex-col items-center">
+              <div
+                className="shrink-0 max-w-full"
+                style={{ width: `${A4_PIXEL_WIDTH * effectiveScale}px`, overflowX: 'clip' }}
+              >
                 <div
                   className="origin-top-right transition-transform duration-150 space-y-8"
                   style={
@@ -3098,7 +3006,7 @@ export function App() {
                 >
                   {(effectiveDocPrintView === 'invoice' ||
                     effectiveDocPrintView === 'both') && (
-                    <InvoiceA4Sheet
+                    <UniversalInvoice
                       invoice={invoice}
                       seller={seller}
                       activePage={currentPage}
@@ -3112,48 +3020,47 @@ export function App() {
                     <ReceiptVoucherA4Sheet invoice={invoice} seller={seller} />
                   )}
                 </div>
-               </div>
-
-                {/* Floating Bottom Pagination Bar when invoice has multiple pages */}
-                {effectiveDocPrintView !== 'receipt' && totalPages > 1 && (
-                  <div className="mt-6 sticky bottom-3 z-20 bg-[#0F172A]/95 text-white border border-[#B45309] rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3">
-                    <button
-                      type="button"
-                      disabled={previewViewMode === 'all' || currentPage <= 1}
-                      onClick={() => {
-                        setPreviewViewMode('single');
-                        setCurrentPage((prev) => Math.max(1, prev - 1));
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
-                      <span>السابق</span>
-                    </button>
-
-                    <span className="text-xs font-extrabold text-amber-300 num-tabular">
-                      {previewViewMode === 'single'
-                        ? `صفحة ${currentPage} من ${totalPages}`
-                        : `معاينة متصلة (${totalPages} صفحات)`}
-                    </span>
-
-                    <button
-                      type="button"
-                      disabled={
-                        previewViewMode === 'all' || currentPage >= totalPages
-                      }
-                      onClick={() => {
-                        setPreviewViewMode('single');
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
-                    >
-                      <span>التالي</span>
-                      <ChevronLeft className="w-3.5 h-3.5 text-amber-400" />
-                    </button>
-                  </div>
-                )}
               </div>
-            )}
+
+              {/* Floating Bottom Pagination Bar when invoice has multiple pages */}
+              {effectiveDocPrintView !== 'receipt' && totalPages > 1 && (
+                <div className="mt-6 sticky bottom-3 z-20 bg-[#0F172A]/95 text-white border border-[#B45309] rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={previewViewMode === 'all' || currentPage <= 1}
+                    onClick={() => {
+                      setPreviewViewMode('single');
+                      setCurrentPage((prev) => Math.max(1, prev - 1));
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
+                    <span>السابق</span>
+                  </button>
+
+                  <span className="text-xs font-extrabold text-amber-300 num-tabular">
+                    {previewViewMode === 'single'
+                      ? `صفحة ${currentPage} من ${totalPages}`
+                      : `معاينة متصلة (${totalPages} صفحات)`}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={
+                      previewViewMode === 'all' || currentPage >= totalPages
+                    }
+                    onClick={() => {
+                      setPreviewViewMode('single');
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
+                  >
+                    <span>التالي</span>
+                    <ChevronLeft className="w-3.5 h-3.5 text-amber-400" />
+                  </button>
+                </div>
+              )}
+            </div>
           </main>
         </div>
 
@@ -3165,20 +3072,30 @@ export function App() {
           />
         )}
 
-        {/* Multi-Company & 8-Template Manager Modal */}
+        {/* Multi-Tenant SaaS Company Settings Modal */}
         {isSellerModalOpen && (
           <SellerSettingsModal
-            companies={companies}
-            activeSeller={seller}
-            onSelectCompany={(selected) => {
-              handleSwitchCompany(selected);
-            }}
-            onSaveCompanies={(updatedList, selectedComp) => {
-              setCompanies(updatedList);
-              saveCompaniesToStorage(updatedList);
-              handleSwitchCompany(selectedComp);
+            seller={seller}
+            onUpdateSeller={(updated: SellerInfo) => setSeller(updated)}
+            onSave={() => {
+              saveSellerToStorage(seller);
+              showToast('تم حفظ إعدادات وهوية المنشأة بنجاح');
             }}
             onClose={() => setIsSellerModalOpen(false)}
+          />
+        )}
+
+        {/* First-Time Setup & Onboarding Wizard */}
+        {isOnboardingOpen && (
+          <OnboardingModal
+            initialSeller={seller}
+            onComplete={(configured) => {
+              setSeller(configured);
+              saveSellerToStorage(configured);
+              setOnboardingCompleted(true);
+              setIsOnboardingOpen(false);
+              showToast(`مرحبًا بك! تم حفظ هوية "${configured.arabicName}" بنجاح`);
+            }}
           />
         )}
       </div>
@@ -3187,7 +3104,7 @@ export function App() {
       <div className="hidden print:block">
         {(effectiveDocPrintView === 'invoice' ||
           effectiveDocPrintView === 'both') && (
-          <InvoiceA4Sheet
+          <UniversalInvoice
             invoice={invoice}
             seller={seller}
             renderAllPages={true}

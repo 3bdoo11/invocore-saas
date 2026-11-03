@@ -1,7 +1,6 @@
 import {
   COMMON_UNITS,
   DEFAULT_CATALOG_ITEMS,
-  DEFAULT_COMPANIES,
   DEFAULT_SELLER_INFO,
   PAYMENT_METHODS,
 } from '../constants/defaults';
@@ -12,6 +11,7 @@ import {
   PaymentMethod,
   QrEncodingMode,
   SellerInfo,
+  TemplateStyle,
 } from '../types/invoice';
 import { deflateSync, inflateSync } from 'fflate';
 import { round2 } from './formatters';
@@ -168,7 +168,25 @@ interface CompactInvoicePayload {
   f?: [number, number, number]; // [discount, invoiceDiscount, paidAmount]
   tf?: string;
   q?: QrEncodingMode;
-  s?: Partial<Record<'a' | 'l' | 'cr' | 'tx' | 'e' | 'ad' | 'tm', string | number>>;
+  s?: Partial<
+    Record<
+      | 'a'
+      | 'l'
+      | 'cr'
+      | 'tx'
+      | 'e'
+      | 'ad'
+      | 'tm'
+      | 'col'
+      | 'tpl'
+      | 'ph'
+      | 'em'
+      | 'ib'
+      | 'bk'
+      | 'lg',
+      string | number
+    >
+  >;
 }
 
 /**
@@ -192,11 +210,8 @@ export function encodePublicInvoiceUrl(
   seller: SellerInfo
 ): string {
   const pmIndex = Math.max(0, PAYMENT_METHODS.indexOf(invoice.paymentMethod));
-  const activeTemplateId = seller.templateId || 1;
-  const companyIdx = Math.max(0, Math.min(7, activeTemplateId - 1));
-  const baseCompany =
-    DEFAULT_COMPANIES.find((c) => c.templateId === activeTemplateId) ||
-    DEFAULT_SELLER_INFO;
+  const styleIdx =
+    seller.templateStyle === 'classic' ? 1 : seller.templateStyle === 'minimalist' ? 2 : 0;
 
   // Build deduplicated description string table
   const counts = new Map<string, number>();
@@ -241,18 +256,26 @@ export function encodePublicInvoiceUrl(
   if (invoice.tafqeetManual && invoice.tafqeetManual.trim() !== '')
     extras.tf = invoice.tafqeetManual;
   if (invoice.qrMode && invoice.qrMode !== 'web') extras.q = invoice.qrMode;
-  const s: Record<string, string> = {};
-  if (seller.arabicName !== baseCompany.arabicName) s.a = seller.arabicName;
-  if (seller.legalType !== baseCompany.legalType) s.l = seller.legalType;
-  if (seller.crNumber !== baseCompany.crNumber) s.cr = seller.crNumber;
-  if (seller.taxNumber !== baseCompany.taxNumber) s.tx = seller.taxNumber;
-  if (seller.englishName !== baseCompany.englishName) s.e = seller.englishName;
-  if (seller.address !== baseCompany.address) s.ad = seller.address;
-  if (Object.keys(s).length > 0) extras.s = s;
+
+  const s: Record<string, string> = {
+    a: seller.arabicName || '',
+    e: seller.englishName || '',
+    cr: seller.crNumber || '',
+    tx: seller.taxNumber || '',
+    ad: seller.address || '',
+    col: seller.primaryColor || '#0F172A',
+    tpl: seller.templateStyle || 'modern',
+  };
+  if (seller.phone) s.ph = seller.phone;
+  if (seller.email) s.em = seller.email;
+  if (seller.iban) s.ib = seller.iban;
+  if (seller.bankName) s.bk = seller.bankName;
+  if (seller.logoDataUrl) s.lg = seller.logoDataUrl;
+  extras.s = s;
 
   const payload: unknown[] = [
     1, // version
-    companyIdx,
+    styleIdx,
     invoice.invoiceNumber,
     invoice.date,
     invoice.time,
@@ -314,18 +337,23 @@ function decodeCompressedInvoice(
   ];
   const extras = (extrasRaw || {}) as Record<string, unknown>;
   const sOv = (extras.s || {}) as Record<string, string>;
-  const base =
-    DEFAULT_COMPANIES.find((c) => c.templateId === Number(cIdx) + 1) ||
-    DEFAULT_COMPANIES[Number(cIdx)] ||
-    DEFAULT_SELLER_INFO;
+  const styleFromIdx: TemplateStyle =
+    Number(cIdx) === 1 ? 'classic' : Number(cIdx) === 2 ? 'minimalist' : 'modern';
+
   const seller: SellerInfo = {
-    ...base,
-    arabicName: sOv.a ?? base.arabicName,
-    legalType: sOv.l ?? base.legalType,
-    crNumber: sOv.cr ?? base.crNumber,
-    taxNumber: sOv.tx ?? base.taxNumber,
-    englishName: sOv.e ?? base.englishName,
-    address: sOv.ad ?? base.address,
+    arabicName: sOv.a || DEFAULT_SELLER_INFO.arabicName,
+    englishName: sOv.e || DEFAULT_SELLER_INFO.englishName,
+    legalType: sOv.l || 'شركة',
+    crNumber: sOv.cr || '',
+    taxNumber: sOv.tx || '',
+    address: sOv.ad || '',
+    phone: sOv.ph,
+    email: sOv.em,
+    iban: sOv.ib,
+    bankName: sOv.bk,
+    primaryColor: sOv.col || '#0F172A',
+    templateStyle: (sOv.tpl as TemplateStyle) || styleFromIdx,
+    logoDataUrl: sOv.lg,
   };
   const dict = Array.isArray(dictRaw) ? dictRaw : [];
   const resolveDesc = (ref: unknown): string => {
@@ -453,10 +481,11 @@ export function decodePublicInvoiceParam(
             })
         : [];
 
-      const baseCompany =
-        DEFAULT_COMPANIES[companyIdx] ||
-        DEFAULT_COMPANIES.find((c) => c.templateId === companyIdx + 1) ||
-        DEFAULT_SELLER_INFO;
+      const baseCompany: SellerInfo = {
+        ...DEFAULT_SELLER_INFO,
+        templateStyle:
+          companyIdx === 1 ? 'classic' : companyIdx === 2 ? 'minimalist' : 'modern',
+      };
 
       const invoice: InvoiceData = {
         id: `public-${invNo}`,
@@ -518,24 +547,26 @@ export function decodePublicInvoiceParam(
         Pick<CompactInvoicePayload, 'ic' | 'pg' | 'tf' | 'q' | 'vr' | 's'>
       >;
 
-      const rawTm = Number(extras.s?.tm);
-      const resolvedTm =
-        rawTm >= 1 && rawTm <= 8
-          ? (rawTm as SellerInfo['templateId'])
-          : DEFAULT_SELLER_INFO.templateId || 1;
-      const baseCompany =
-        DEFAULT_COMPANIES.find((c) => c.templateId === resolvedTm) ||
-        DEFAULT_SELLER_INFO;
+      const tplStyle: TemplateStyle =
+        extras.s?.tpl === 'classic' || extras.s?.tpl === 'minimalist'
+          ? (extras.s.tpl as TemplateStyle)
+          : 'modern';
 
       const seller: SellerInfo = {
-        ...baseCompany,
-        arabicName: String(extras.s?.a ?? baseCompany.arabicName),
-        legalType: String(extras.s?.l ?? baseCompany.legalType),
-        crNumber: String(extras.s?.cr ?? baseCompany.crNumber),
-        taxNumber: String(extras.s?.tx ?? baseCompany.taxNumber),
-        englishName: String(extras.s?.e ?? baseCompany.englishName),
-        address: String(extras.s?.ad ?? baseCompany.address),
-        templateId: resolvedTm,
+        ...DEFAULT_SELLER_INFO,
+        arabicName: String(extras.s?.a ?? DEFAULT_SELLER_INFO.arabicName),
+        legalType: String(extras.s?.l ?? DEFAULT_SELLER_INFO.legalType),
+        crNumber: String(extras.s?.cr ?? DEFAULT_SELLER_INFO.crNumber),
+        taxNumber: String(extras.s?.tx ?? DEFAULT_SELLER_INFO.taxNumber),
+        englishName: String(extras.s?.e ?? DEFAULT_SELLER_INFO.englishName),
+        address: String(extras.s?.ad ?? DEFAULT_SELLER_INFO.address),
+        primaryColor: String(extras.s?.col ?? DEFAULT_SELLER_INFO.primaryColor),
+        templateStyle: tplStyle,
+        phone: extras.s?.ph ? String(extras.s.ph) : undefined,
+        email: extras.s?.em ? String(extras.s.em) : undefined,
+        iban: extras.s?.ib ? String(extras.s.ib) : undefined,
+        bankName: extras.s?.bk ? String(extras.s.bk) : undefined,
+        logoDataUrl: extras.s?.lg ? String(extras.s.lg) : undefined,
       };
 
       const discountType: DiscountType =
@@ -571,7 +602,7 @@ export function decodePublicInvoiceParam(
         tafqeetManual: extras.tf ?? null,
         qrMode: extras.q ?? 'web',
         status: 'issued',
-        companyId: baseCompany.id,
+        companyId: seller.id,
         sellerSnapshot: seller,
       };
 

@@ -1,18 +1,18 @@
 {
-  "timestamp": "2026-11-02T20:30:33.896Z",
-  "total": 13,
-  "passed": 13,
+  "timestamp": "2026-11-03T12:56:18.679Z",
+  "total": 12,
+  "passed": 12,
   "failed": 0,
   "testResults": [
+    {
+      "name": "SaaS First-Time Setup & Onboarding Wizard",
+      "passed": true,
+      "details": "Completed: true, Configured Name: \"شركة الحلول السحابية المتقدمة\""
+    },
     {
       "name": "Clean Blank-Slate Startup (Zero Dummy Client or Line Items)",
       "passed": true,
       "details": "Client: \"\", Tax: \"\", Items: 1, Row 1: \"\""
-    },
-    {
-      "name": "Saved Clients Directory Pre-seeded Dropdown & 1-Click Auto-Fill",
-      "passed": true,
-      "details": "Pre-seeded Options: 5, Auto-Filled: \"شركة زاد الكريم للمقاولات\", Cleared: \"\""
     },
     {
       "name": "Viewport Overflow Check: Android (360x800)",
@@ -30,14 +30,14 @@
       "details": "scroll: 1440px, client: 1440px"
     },
     {
-      "name": "No NaN or Invalid Math on Boundary Values",
+      "name": "Dynamic Company Settings Tab & Persistent Storage",
       "passed": true,
-      "details": "Zero NaN values in DOM"
+      "details": "Saved Phone: \"0512345678\""
     },
     {
-      "name": "Discount Math Clamping (Subtotal Cannot Go Negative)",
+      "name": "Universal Invoice Template Style Switcher (Modern, Classic, Minimalist)",
       "passed": true,
-      "details": "No negative total"
+      "details": "Classic: true, Minimalist: true, Modern: true"
     },
     {
       "name": "Heavy Multi-Page Stress Test (135 Items Auto-Paginated to 9 Pages)",
@@ -47,17 +47,12 @@
     {
       "name": "Page Navigation & Page 2 Transition in 135-Item Invoice",
       "passed": true,
-      "details": "Matches: [\"صفحة العميل\",\"صفحة)\",\"صفحة سند القبض (خاص بالفواتير الآج\",\"صفحة 2 من 9\",\"صفحة التالية (3 من 9) — الإجماليات\",\"صفحة الأخيرة\",\"صفحة 2 من 9\",\"صفحة 2 من 9\"]"
+      "details": "Navigated to page 2: true"
     },
     {
-      "name": "All 8 Companies Seamlessly Render 135 Items Without Memory Crash",
+      "name": "Receipt Voucher Dynamic Company Data & Layout",
       "passed": true,
-      "details": "Switched 8 companies: true"
-    },
-    {
-      "name": "Receipt Voucher Company Customization & Bank IBANs (Sharek & Autad)",
-      "passed": true,
-      "details": "Sharek SNB: true, Autad IBAN: true"
+      "details": "Voucher Header: true, Company Name: true"
     },
     {
       "name": "Public Client Viewer Lossless QR Decoding",

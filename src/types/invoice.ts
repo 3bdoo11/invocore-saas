@@ -4,7 +4,7 @@ export type QrEncodingMode = 'both' | 'zatca' | 'web';
 
 export type DiscountType = 'amount' | 'percentage';
 
-export type CompanyTemplateId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type TemplateStyle = 'modern' | 'classic' | 'minimalist';
 
 export type DocumentPrintView = 'invoice' | 'receipt' | 'both';
 
@@ -28,20 +28,22 @@ export interface InvoiceLineItem {
 export interface SellerInfo {
   id?: string;
   arabicName: string;
-  legalType: string;
+  legalType?: string;
   crNumber: string;
   taxNumber: string;
   englishName: string;
   address: string;
-  logoDataUrl?: string;
-  templateId?: CompanyTemplateId;
+  logoDataUrl?: string; // Custom Base64 logo
+  primaryColor?: string; // Brand Hex color e.g. #0F172A
+  accentColor?: string;
+  templateStyle?: TemplateStyle; // 'modern' | 'classic' | 'minimalist'
+  fontFamily?: string;
   phone?: string;
   mobile?: string;
   email?: string;
   bankName?: string;
   accountNumber?: string;
   iban?: string;
-  secoVendorId?: string;
   buildingNo?: string;
   streetName?: string;
   district?: string;
