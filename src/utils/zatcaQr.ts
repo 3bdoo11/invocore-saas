@@ -270,7 +270,10 @@ export function encodePublicInvoiceUrl(
   if (seller.email) s.em = seller.email;
   if (seller.iban) s.ib = seller.iban;
   if (seller.bankName) s.bk = seller.bankName;
-  if (seller.logoDataUrl) s.lg = seller.logoDataUrl;
+  // Never embed inline Base64 data URLs into QR code URLs to prevent QR capacity overflows
+  if (seller.logoDataUrl && !seller.logoDataUrl.startsWith('data:') && seller.logoDataUrl.length < 256) {
+    s.lg = seller.logoDataUrl;
+  }
   extras.s = s;
 
   const payload: unknown[] = [

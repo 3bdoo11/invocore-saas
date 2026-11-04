@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { SafeQRCode } from './SafeQRCode';
 import { PAYMENT_METHODS } from '../constants/defaults';
 import {
   InvoiceData,
@@ -267,7 +267,7 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
             <div>{seller.arabicName}</div>
           </div>
           <div className="p-1 border border-slate-200 rounded-lg bg-white shadow-xs">
-            <QRCodeSVG value={publicUrl} size={72} level="L" includeMargin={false} />
+            <SafeQRCode value={publicUrl} size={72} level="L" includeMargin={false} />
           </div>
         </div>
       </div>

@@ -65,8 +65,13 @@ export function loadInvoicesFromStorage(): InvoiceData[] {
 export function saveInvoicesToStorage(invoices: InvoiceData[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices));
-  } catch {
-    // Ignore storage quota errors gracefully
+  } catch (err) {
+    console.warn('saveInvoicesToStorage quota/write error:', err);
+    try {
+      if (invoices.length > 50) {
+        localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices.slice(0, 50)));
+      }
+    } catch {}
   }
 }
 
@@ -117,8 +122,14 @@ export function loadSellerFromStorage(): SellerInfo {
 export function saveSellerToStorage(seller: SellerInfo): void {
   try {
     localStorage.setItem(STORAGE_KEYS.SELLER_INFO, JSON.stringify(seller));
-  } catch {
-    // Ignore
+  } catch (err) {
+    console.warn('saveSellerToStorage quota error, retrying without logo:', err);
+    try {
+      const withoutLogo = { ...seller, logoDataUrl: undefined };
+      localStorage.setItem(STORAGE_KEYS.SELLER_INFO, JSON.stringify(withoutLogo));
+    } catch (e2) {
+      console.error('saveSellerToStorage failed completely:', e2);
+    }
   }
 }
 

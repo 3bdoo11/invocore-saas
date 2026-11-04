@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Building2,
   Upload,
@@ -12,9 +12,11 @@ import {
   Mail,
   CreditCard,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { SellerInfo } from '../types/invoice';
 import { BRAND_COLOR_PRESETS, TEMPLATE_STYLES } from '../constants/defaults';
+import { compressAndResizeImage } from '../utils/imageUtils';
 
 interface CompanySettingsTabProps {
   seller: SellerInfo;
@@ -28,37 +30,50 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
   onSave,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingLogo, setIsProcessingLogo] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setUploadError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('يرجى اختيار ملف صورة صالح (PNG, JPEG, WebP, SVG)');
+      setUploadError('يرجى اختيار ملف صورة صالح (PNG, JPEG, WebP, SVG)');
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('حجم الصورة كبير جداً. يرجى اختيار صورة أقل من 2 ميجابايت.');
-      return;
-    }
+    try {
+      setIsProcessingLogo(true);
+      // Compress and resize image using HTML5 canvas (max 300x300, < 40KB)
+      const { dataUrl, extractedColor } = await compressAndResizeImage(file, 300, 300);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
       onUpdateSeller({
         ...seller,
         logoDataUrl: dataUrl,
+        primaryColor: seller.primaryColor === '#0F172A' ? extractedColor : seller.primaryColor,
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Logo upload/compression error:', err);
+      setUploadError('تعذر معالجة الصورة. يرجى تجربة صورة أخرى.');
+    } finally {
+      setIsProcessingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleRemoveLogo = () => {
-    onUpdateSeller({
-      ...seller,
-      logoDataUrl: undefined,
-    });
+    try {
+      onUpdateSeller({
+        ...seller,
+        logoDataUrl: undefined,
+      });
+    } catch (err) {
+      console.warn('Remove logo error:', err);
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -262,7 +277,18 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
               <span>شعار المنشأة (Custom Logo)</span>
             </h3>
 
-            {seller.logoDataUrl ? (
+            {uploadError && (
+              <div className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-xl text-center">
+                {uploadError}
+              </div>
+            )}
+
+            {isProcessingLogo ? (
+              <div className="border-2 border-dashed border-amber-400 bg-amber-50/50 rounded-xl p-6 text-center space-y-2">
+                <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto" />
+                <div className="text-xs font-bold text-slate-700">جاري ضغط وتحسين الشعار...</div>
+              </div>
+            ) : seller.logoDataUrl ? (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center space-y-3 bg-slate-50/50">
                 <div className="flex justify-center">
                   <img

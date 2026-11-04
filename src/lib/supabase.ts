@@ -2,11 +2,14 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
 
-export const LIVE_SUPABASE_URL = 'https://usivkhxbekrwdnuijsnw.supabase.co';
-export const LIVE_SUPABASE_ANON_KEY = '[sb_publishable_Bl1yBgjWmq4WWjSzpXqeUw_2CTu02sC]';
+export const LIVE_SUPABASE_URL = 'https://gfevoljcqvxncmksfnlr.supabase.co';
+export const LIVE_SUPABASE_ANON_KEY = 'sb_publishable_Bl1yBgjWmq4WWjSzpXqeUw_2CTu02sC';
 
-export const supabaseUrl = (env.VITE_SUPABASE_URL || LIVE_SUPABASE_URL).trim();
-export const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || LIVE_SUPABASE_ANON_KEY).trim();
+const rawUrl = (env.VITE_SUPABASE_URL || LIVE_SUPABASE_URL).trim();
+const rawKey = (env.VITE_SUPABASE_ANON_KEY || LIVE_SUPABASE_ANON_KEY).trim();
+
+export const supabaseUrl = rawUrl.replace(/^\[|\]$/g, '').trim();
+export const supabaseAnonKey = rawKey.replace(/^\[|\]$/g, '').trim();
 
 export const isSupabaseConfigured: boolean = true;
 

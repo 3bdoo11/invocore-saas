@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { SafeQRCode } from './SafeQRCode';
 import { Check, Copy, ExternalLink, MessageCircle, Monitor, X } from 'lucide-react';
 
 interface ShareInvoiceModalProps {
@@ -53,13 +53,11 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
         <div className="p-5 space-y-3">
           <div className="flex justify-center">
             <div className="bg-white border border-slate-300 rounded-xl p-2">
-              <QRCodeSVG
+              <SafeQRCode
                 value={url}
                 size={220}
                 level="L"
                 includeMargin={true}
-                bgColor="#FFFFFF"
-                fgColor="#000000"
               />
             </div>
           </div>

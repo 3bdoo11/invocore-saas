@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { SafeQRCode } from './SafeQRCode';
 import { InvoiceData, SellerInfo } from '../types/invoice';
 import {
   calculateInvoiceTotals,
@@ -392,7 +392,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
 
                 <div className="flex items-center gap-3">
                   <div className="p-1 border border-slate-200 rounded-lg bg-white shadow-xs">
-                    <QRCodeSVG
+                    <SafeQRCode
                       value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
                       size={68}
                       level="L"

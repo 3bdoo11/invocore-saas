@@ -9,9 +9,11 @@ import {
   ArrowLeft,
   ShieldCheck,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { SellerInfo } from '../types/invoice';
 import { BRAND_COLOR_PRESETS, TEMPLATE_STYLES } from '../constants/defaults';
+import { compressAndResizeImage } from '../utils/imageUtils';
 
 interface OnboardingModalProps {
   initialSeller: SellerInfo;
@@ -44,21 +46,36 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const primaryColor = seller.primaryColor || '#0F172A';
   const activeStyle = seller.templateStyle || 'modern';
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isProcessingLogo, setIsProcessingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('يرجى اختيار ملف صورة صالح (PNG, JPEG, WebP, SVG)');
+      setError('يرجى اختيار ملف صورة صالح (PNG, JPEG, WebP, SVG)');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setSeller((prev) => ({ ...prev, logoDataUrl: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsProcessingLogo(true);
+      const { dataUrl, extractedColor } = await compressAndResizeImage(file, 300, 300);
+      setSeller((prev) => ({
+        ...prev,
+        logoDataUrl: dataUrl,
+        primaryColor: prev.primaryColor === '#0F172A' ? extractedColor : prev.primaryColor,
+      }));
+    } catch (err) {
+      console.error('Onboarding logo upload error:', err);
+      setError('تعذر معالجة وتصغير الصورة. يرجى تجربة صورة أخرى.');
+    } finally {
+      setIsProcessingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleNextStep = () => {
@@ -243,7 +260,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <span>شعار المنشأة (Custom Logo)</span>
                 </label>
 
-                {seller.logoDataUrl ? (
+                {isProcessingLogo ? (
+                  <div className="flex items-center justify-center gap-2 border-2 border-dashed border-amber-400 rounded-xl p-4 bg-amber-50/50">
+                    <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
+                    <span className="text-xs font-bold text-slate-700">جاري ضغط ومعالجة الشعار...</span>
+                  </div>
+                ) : seller.logoDataUrl ? (
                   <div className="flex items-center gap-3 border border-slate-200 rounded-xl p-3 bg-slate-50">
                     <img
                       src={seller.logoDataUrl}
