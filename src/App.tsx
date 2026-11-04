@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Clock,
   Copy,
+  Crown,
   Database,
   Download,
   ExternalLink,
@@ -20,6 +21,7 @@ import {
   FileText,
   History,
   Layers,
+  LogOut,
   MessageCircle,
   Percent,
   Plus,
@@ -33,6 +35,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  User as UserIcon,
   Users,
   ZoomIn,
   ZoomOut,
@@ -100,6 +103,7 @@ import {
 import {
   downloadInvoiceItemsTemplate,
   exportCurrentInvoiceItemsToExcel,
+  exportInvoicesHistoryToExcel,
   ImportedCatalogItemData,
   parseInvoiceItemsExcelFile,
 } from './utils/excelCatalog';
@@ -113,6 +117,17 @@ import { SellerSettingsModal } from './components/SellerSettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { PublicInvoiceViewer } from './components/PublicInvoiceViewer';
 import { ShareInvoiceModal } from './components/ShareInvoiceModal';
+import { User } from '@supabase/supabase-js';
+import {
+  isSupabaseConfigured,
+  supabase,
+  UserProfile,
+  fetchUserProfile,
+  incrementInvoiceCounter,
+  logActivity,
+} from './lib/supabase';
+import { AuthModal } from './components/AuthModal';
+import { TrialLimitModal } from './components/TrialLimitModal';
 
 type AdminTab = 'editor' | 'catalog' | 'history' | 'settings';
 type MobilePane = 'controls' | 'preview';
@@ -184,6 +199,136 @@ export function App() {
   // Document View / Print Mode ('invoice' | 'receipt' | 'both')
   const [docPrintView, setDocPrintView] =
     useState<DocumentPrintView>('invoice');
+
+  // --- Supabase Authentication, Profile & Usage Tracking ---
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+  const [showSetupBanner, setShowSetupBanner] = useState<boolean>(true);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('invocore_guest_session');
+      if (saved === 'true') return true;
+      if (saved === 'false') return false;
+      return !isSupabaseConfigured;
+    } catch {
+      return !isSupabaseConfigured;
+    }
+  });
+  const [guestUsageCount, setGuestUsageCount] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem('invocore_guest_usage') || '0');
+    } catch {
+      return 0;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isTrialLimitModalOpen, setIsTrialLimitModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (publicInvoiceParam !== null) {
+      setIsAuthChecking(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function checkSession() {
+      try {
+        if (isSupabaseConfigured) {
+          const { data } = await supabase.auth.getSession();
+          if (!isMounted) return;
+          if (data?.session?.user) {
+            setCurrentUser(data.session.user);
+            const prof = await fetchUserProfile(data.session.user);
+            if (isMounted) setUserProfile(prof);
+          }
+        }
+      } catch (err) {
+        console.warn('Session check failed:', err);
+      } finally {
+        if (isMounted) setIsAuthChecking(false);
+      }
+    }
+
+    checkSession();
+
+    if (isSupabaseConfigured) {
+      const { data: authSub } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          if (!isMounted) return;
+          if (session?.user) {
+            setCurrentUser(session.user);
+            const prof = await fetchUserProfile(session.user);
+            if (isMounted) setUserProfile(prof);
+            setIsGuestMode(false);
+            try {
+              localStorage.removeItem('invocore_guest_session');
+            } catch {}
+          } else {
+            setCurrentUser(null);
+            setUserProfile(null);
+          }
+        }
+      );
+
+      return () => {
+        isMounted = false;
+        authSub.subscription.unsubscribe();
+      };
+    } else {
+      setIsAuthChecking(false);
+    }
+  }, [publicInvoiceParam]);
+
+  const currentPlanTier: 'free_trial' | 'pro' = userProfile?.plan_tier || 'free_trial';
+  const invoicesGenerated: number =
+    userProfile?.invoices_generated ?? (isGuestMode ? guestUsageCount : 0);
+  const maxTrialInvoices: number = userProfile?.max_trial_invoices ?? 3;
+  const isWatermarked: boolean = currentPlanTier !== 'pro';
+
+  const handleSignOut = async () => {
+    if (isSupabaseConfigured && currentUser) {
+      await logActivity('LOGOUT', {}, currentUser.id, currentUser.email);
+      await supabase.auth.signOut();
+    }
+    setCurrentUser(null);
+    setUserProfile(null);
+    setIsGuestMode(false);
+    try {
+      localStorage.removeItem('invocore_guest_session');
+    } catch {}
+    setIsAuthModalOpen(true);
+  };
+
+  const handleContinueAsGuest = () => {
+    setIsGuestMode(true);
+    try {
+      localStorage.setItem('invocore_guest_session', 'true');
+    } catch {}
+    setIsAuthModalOpen(false);
+    showToast('مرحبًا بك في وضع المعاينة السريعة (علامة مائية تجريبية)');
+  };
+
+  const handleAuthSuccess = (profile: UserProfile, isGuest?: boolean) => {
+    if (isGuest) {
+      handleContinueAsGuest();
+    } else {
+      setUserProfile(profile);
+      setIsGuestMode(false);
+      try {
+        localStorage.removeItem('invocore_guest_session');
+      } catch {}
+      setIsAuthModalOpen(false);
+      showToast(`أهلاً بك ${profile.full_name || profile.email}! تم تسجيل الدخول بنجاح`);
+    }
+  };
+
+  const shouldShowAuthGate =
+    !isAuthChecking &&
+    publicInvoiceParam === null &&
+    !currentUser &&
+    !isGuestMode;
 
   // Expose test helper methods on window for automated QA verification
   useEffect(() => {
@@ -452,10 +597,58 @@ export function App() {
     return <PublicInvoiceViewer decodedData={decodedPublicData} />;
   }
 
-  // --- Safe Print Helper ---
-  const handlePrintCurrentDocument = () => {
+  // --- Safe Print Helper & Usage Enforcement ---
+  const handlePrintCurrentDocument = async () => {
+    // If free trial or guest, check limit
+    if (currentPlanTier === 'free_trial') {
+      if (invoicesGenerated >= maxTrialInvoices) {
+        logActivity('LIMIT_REACHED', {
+          action: 'print_blocked',
+          invoicesGenerated,
+          maxTrialInvoices,
+        }, currentUser?.id, currentUser?.email);
+        setIsTrialLimitModalOpen(true);
+        return;
+      }
+
+      // Increment in database / storage
+      const res = await incrementInvoiceCounter(currentUser);
+      if (currentUser && userProfile) {
+        setUserProfile((prev) =>
+          prev ? { ...prev, invoices_generated: res.invoices_generated } : null
+        );
+      } else {
+        setGuestUsageCount(res.invoices_generated);
+      }
+    } else {
+      logActivity('PRINT_INVOICE', {
+        plan_tier: currentPlanTier,
+        invoiceNumber: invoice.invoiceNumber,
+      }, currentUser?.id, currentUser?.email);
+    }
+
     const prefix = docPrintView === 'receipt' ? 'Receipt' : 'Invoice';
     triggerSafePrint(invoice.invoiceNumber, prefix);
+  };
+
+  // --- Safe Excel Export & Usage Enforcement ---
+  const handleExportInvoicesHistory = () => {
+    if (currentPlanTier === 'free_trial' && invoicesGenerated >= maxTrialInvoices) {
+      logActivity('LIMIT_REACHED', {
+        action: 'excel_export_blocked',
+        invoicesGenerated,
+        maxTrialInvoices,
+      }, currentUser?.id, currentUser?.email);
+      setIsTrialLimitModalOpen(true);
+      return;
+    }
+
+    logActivity('EXPORT_EXCEL', {
+      count: savedInvoices.length,
+      plan_tier: currentPlanTier,
+    }, currentUser?.id, currentUser?.email);
+
+    exportInvoicesHistoryToExcel(savedInvoices);
   };
 
   // --- WhatsApp Share (synchronous popup-safe; copies message + opens WhatsApp + desktop share modal) ---
@@ -1081,6 +1274,82 @@ export function App() {
         dir="rtl"
         className="no-print min-h-screen w-full max-w-[100vw] overflow-x-hidden lg:h-screen lg:overflow-hidden flex flex-col bg-slate-100 text-slate-900"
       >
+        {/* Subtle Admin Setup Banner when Supabase is not configured */}
+        {!isSupabaseConfigured && showSetupBanner && (
+          <div className="bg-amber-950/60 border-b border-amber-500/30 text-amber-200 text-xs px-3 sm:px-5 py-1.5 flex items-center justify-between shrink-0 z-40">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>وضع المحاكاة المحلي نشط (Demo Sandbox):</strong> اربط بيانات Supabase في ملف <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded text-[11px] font-mono">.env</code> لتفعيل المصادقة وقواعد البيانات السحابية الحقيقية.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSetupBanner(false)}
+              className="text-amber-400 hover:text-white p-1 text-xs cursor-pointer font-bold"
+              title="إغلاق التنبيه"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Row 0: Commercial License & User Status Bar */}
+        <div className="bg-[#090D16] border-b border-slate-800/80 px-3 sm:px-5 py-2 text-xs flex flex-wrap items-center justify-between gap-2.5 z-40 shrink-0 text-slate-300">
+          {/* User Profile & Plan Badge */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 font-bold text-slate-200">
+              <UserIcon className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                {currentUser?.email ||
+                  (isGuestMode
+                    ? 'زائر تجريبي (⚡ Guest Preview)'
+                    : 'حساب محلي (Demo Local)')}
+              </span>
+            </div>
+
+            <span className="text-slate-700 hidden sm:inline">•</span>
+
+            {currentPlanTier === 'pro' ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <Crown className="w-3.5 h-3.5 text-emerald-400" />
+                <span>حساب مرخص (PRO Licensed Account)</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-500/15 text-amber-300 border border-amber-400/30">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>
+                  رصيد الفواتير التجريبية: {Math.max(0, maxTrialInvoices - invoicesGenerated)} / {maxTrialInvoices} متبقية (Free Trial)
+                </span>
+              </span>
+            )}
+          </div>
+
+          {/* Action Pod */}
+          <div className="flex items-center gap-2">
+            {currentPlanTier !== 'pro' && (
+              <button
+                type="button"
+                onClick={() => setIsTrialLimitModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-sm transition-all cursor-pointer"
+              >
+                <Crown className="w-3.5 h-3.5 fill-slate-950" />
+                <span>ترقية إلى PRO</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              title={currentUser ? 'تسجيل الخروج من الحساب' : 'تسجيل الدخول'}
+            >
+              <LogOut className="w-3.5 h-3.5 text-amber-400" />
+              <span>{currentUser ? 'تسجيل الخروج' : 'تسجيل الدخول'}</span>
+            </button>
+          </div>
+        </div>
+
         {/* Row 1: Main Navigation & Action Bar - Dark Navy #0F172A with 3 Clean Grouped Control Pods */}
         <header className="bg-[#0F172A] text-white border-b-2 border-[#B45309] px-3 sm:px-5 py-3 lg:py-2.5 shrink-0 shadow-lg z-30 w-full max-w-full min-w-0">
           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between w-full min-w-0 gap-2.5">
@@ -1558,6 +1827,7 @@ export function App() {
                       saveInvoicesToStorage(nextList);
                       showToast('تم حذف الفاتورة من السجل.');
                     }}
+                    onExportExcel={handleExportInvoicesHistory}
                   />
                 )}
 
@@ -3033,12 +3303,17 @@ export function App() {
                       activePage={currentPage}
                       viewMode={previewViewMode}
                       renderAllPages={false}
+                      isWatermarked={isWatermarked}
                     />
                   )}
 
                   {(effectiveDocPrintView === 'receipt' ||
                     effectiveDocPrintView === 'both') && (
-                    <ReceiptVoucherA4Sheet invoice={invoice} seller={seller} />
+                    <ReceiptVoucherA4Sheet
+                      invoice={invoice}
+                      seller={seller}
+                      isWatermarked={isWatermarked}
+                    />
                   )}
                 </div>
               </div>
@@ -3120,6 +3395,22 @@ export function App() {
           />
         )}
 
+        {/* Supabase Authentication Portal */}
+        <AuthModal
+          isOpen={shouldShowAuthGate || isAuthModalOpen}
+          onSuccess={handleAuthSuccess}
+          onContinueAsGuest={handleContinueAsGuest}
+        />
+
+        {/* Commercial Trial Limit & Upgrade Modal */}
+        <TrialLimitModal
+          isOpen={isTrialLimitModalOpen}
+          onClose={() => setIsTrialLimitModalOpen(false)}
+          invoicesGenerated={invoicesGenerated}
+          maxInvoices={maxTrialInvoices}
+          userEmail={currentUser?.email || undefined}
+        />
+
         {/* Global SaaS Platform Footer */}
         <footer className="no-print bg-[#0F172A] border-t border-slate-800 text-slate-400 text-xs py-2 px-4 flex flex-col sm:flex-row items-center justify-between gap-1.5 shrink-0 z-20">
           <div className="flex items-center gap-2 font-medium">
@@ -3141,11 +3432,16 @@ export function App() {
             invoice={invoice}
             seller={seller}
             renderAllPages={true}
+            isWatermarked={isWatermarked}
           />
         )}
         {(effectiveDocPrintView === 'receipt' ||
           effectiveDocPrintView === 'both') && (
-          <ReceiptVoucherA4Sheet invoice={invoice} seller={seller} />
+          <ReceiptVoucherA4Sheet
+            invoice={invoice}
+            seller={seller}
+            isWatermarked={isWatermarked}
+          />
         )}
       </div>
     </>

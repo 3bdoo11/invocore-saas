@@ -9,6 +9,7 @@
     "preview": "node scripts/dev-server.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "fflate": "^0.8.2",
     "lucide-react": "^0.468.0",
     "qrcode.react": "^4.2.0",

@@ -12,6 +12,7 @@ import {
   encodePublicInvoiceUrl,
   generateZatcaQrBase64,
 } from '../utils/zatcaQr';
+import { TrialWatermark } from './TrialWatermark';
 
 export interface UniversalInvoiceProps {
   invoice: InvoiceData;
@@ -19,6 +20,7 @@ export interface UniversalInvoiceProps {
   activePage?: number;
   viewMode?: 'single' | 'all';
   renderAllPages?: boolean;
+  isWatermarked?: boolean;
 }
 
 export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
@@ -27,6 +29,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
   activePage = 1,
   viewMode = 'single',
   renderAllPages = false,
+  isWatermarked = false,
 }) => {
   const totals = useMemo(() => calculateInvoiceTotals(invoice), [invoice]);
 
@@ -91,6 +94,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                 : 'border border-slate-200'
             }`}
           >
+            {isWatermarked && <TrialWatermark />}
             {/* ------------------------------------------------------------- */}
             {/* TOP HEADER SECTION (Dynamic based on Template Style)          */}
             {/* ------------------------------------------------------------- */}

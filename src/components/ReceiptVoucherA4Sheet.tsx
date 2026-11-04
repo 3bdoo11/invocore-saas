@@ -13,15 +13,18 @@ import {
 } from '../utils/formatters';
 import { numberToArabicTafqeet } from '../utils/tafqeet';
 import { encodePublicInvoiceUrl } from '../utils/zatcaQr';
+import { TrialWatermark } from './TrialWatermark';
 
 interface ReceiptVoucherA4SheetProps {
   invoice: InvoiceData;
   seller: SellerInfo;
+  isWatermarked?: boolean;
 }
 
 export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
   invoice,
   seller,
+  isWatermarked = false,
 }) => {
   const totals = useMemo(() => calculateInvoiceTotals(invoice), [invoice]);
 
@@ -100,6 +103,7 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
           : 'border border-slate-200'
       }`}
     >
+      {isWatermarked && <TrialWatermark />}
       {/* ------------------------------------------------------------- */}
       {/* HEADER SECTION                                                */}
       {/* ------------------------------------------------------------- */}

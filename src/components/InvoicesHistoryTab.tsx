@@ -28,6 +28,7 @@ interface InvoicesHistoryTabProps {
   onSelectInvoice: (invoice: InvoiceData) => void;
   onPrintInvoice: (invoice: InvoiceData) => void;
   onDeleteInvoice: (id: string) => void;
+  onExportExcel?: () => void;
 }
 
 export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
@@ -37,6 +38,7 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
   onSelectInvoice,
   onPrintInvoice,
   onDeleteInvoice,
+  onExportExcel,
 }) => {
   const [query, setQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -97,7 +99,13 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
         <button
           type="button"
           disabled={invoices.length === 0}
-          onClick={() => exportInvoicesHistoryToExcel(invoices)}
+          onClick={() => {
+            if (onExportExcel) {
+              onExportExcel();
+            } else {
+              exportInvoicesHistoryToExcel(invoices);
+            }
+          }}
           className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:pointer-events-none text-white font-extrabold text-xs py-2.5 px-4 rounded-lg shadow-sm transition-colors cursor-pointer"
         >
           <FileSpreadsheet className="w-4 h-4 text-amber-300" />
