@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Building2,
   Upload,
@@ -8,6 +8,7 @@ import {
   Sparkles,
   ArrowLeft,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import { SellerInfo } from '../types/invoice';
 import { BRAND_COLOR_PRESETS, TEMPLATE_STYLES } from '../constants/defaults';
@@ -15,16 +16,30 @@ import { BRAND_COLOR_PRESETS, TEMPLATE_STYLES } from '../constants/defaults';
 interface OnboardingModalProps {
   initialSeller: SellerInfo;
   onComplete: (configuredSeller: SellerInfo) => void;
+  onClose?: () => void;
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   initialSeller,
   onComplete,
+  onClose,
 }) => {
   const [seller, setSeller] = useState<SellerInfo>({ ...initialSeller });
   const [step, setStep] = useState<1 | 2>(1);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const primaryColor = seller.primaryColor || '#0F172A';
   const activeStyle = seller.templateStyle || 'modern';
@@ -72,7 +87,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <div
       dir="rtl"
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-amber-500 selection:text-slate-950"
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-amber-500 selection:text-slate-950 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) {
+          onClose();
+        }
+      }}
     >
       <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Header Banner */}
@@ -80,6 +100,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           style={{ backgroundColor: primaryColor }}
           className="text-white p-6 sm:p-7 relative overflow-hidden shrink-0"
         >
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 left-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="إغلاق"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+
           <div className="flex items-center justify-between relative z-10">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 backdrop-blur-md border border-white/20 text-amber-300">

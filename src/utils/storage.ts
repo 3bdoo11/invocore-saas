@@ -1,8 +1,8 @@
 import {
   DEFAULT_CATALOG_ITEMS,
   DEFAULT_SAVED_CLIENTS,
+  DEFAULT_SELLER_INFO,
   EMPTY_CLIENT_INFO,
-  EMPTY_SELLER_INFO,
   INITIAL_INVOICE_NUMBER,
   STORAGE_KEYS,
 } from '../constants/defaults';
@@ -101,14 +101,16 @@ export function saveNextInvoiceNumber(nextNo: number): void {
 export function loadSellerFromStorage(): SellerInfo {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SELLER_INFO);
-    if (!raw) return EMPTY_SELLER_INFO;
+    if (!raw) return DEFAULT_SELLER_INFO;
     const parsed = JSON.parse(raw);
     return {
-      ...EMPTY_SELLER_INFO,
+      ...DEFAULT_SELLER_INFO,
       ...parsed,
+      arabicName: parsed.arabicName?.trim() || DEFAULT_SELLER_INFO.arabicName,
+      englishName: parsed.englishName?.trim() || DEFAULT_SELLER_INFO.englishName,
     };
   } catch {
-    return EMPTY_SELLER_INFO;
+    return DEFAULT_SELLER_INFO;
   }
 }
 

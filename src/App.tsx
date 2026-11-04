@@ -21,6 +21,7 @@ import {
   FileText,
   History,
   Layers,
+  LogIn,
   LogOut,
   MessageCircle,
   Percent,
@@ -80,7 +81,6 @@ import {
 } from './utils/formatters';
 import {
   createFreshBlankInvoice,
-  isOnboardingCompleted,
   loadCatalogFromStorage,
   loadInvoicesFromStorage,
   loadNextInvoiceNumber,
@@ -179,9 +179,7 @@ export function App() {
   const [seller, setSeller] = useState<SellerInfo>(() =>
     loadSellerFromStorage()
   );
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(
-    () => !isOnboardingCompleted()
-  );
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
 
   const [invoice, setInvoice] = useState<InvoiceData>(() => {
     const existing = loadInvoicesFromStorage();
@@ -203,18 +201,7 @@ export function App() {
   // --- Supabase Authentication, Profile & Usage Tracking ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
-  const [showSetupBanner, setShowSetupBanner] = useState<boolean>(true);
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('invocore_guest_session');
-      if (saved === 'true') return true;
-      if (saved === 'false') return false;
-      return !isSupabaseConfigured;
-    } catch {
-      return !isSupabaseConfigured;
-    }
-  });
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(true);
   const [guestUsageCount, setGuestUsageCount] = useState<number>(() => {
     try {
       return Number(localStorage.getItem('invocore_guest_usage') || '0');
@@ -227,7 +214,6 @@ export function App() {
 
   useEffect(() => {
     if (publicInvoiceParam !== null) {
-      setIsAuthChecking(false);
       return;
     }
 
@@ -246,8 +232,6 @@ export function App() {
         }
       } catch (err) {
         console.warn('Session check failed:', err);
-      } finally {
-        if (isMounted) setIsAuthChecking(false);
       }
     }
 
@@ -276,8 +260,6 @@ export function App() {
         isMounted = false;
         authSub.subscription.unsubscribe();
       };
-    } else {
-      setIsAuthChecking(false);
     }
   }, [publicInvoiceParam]);
 
@@ -287,18 +269,19 @@ export function App() {
   const maxTrialInvoices: number = userProfile?.max_trial_invoices ?? 3;
   const isWatermarked: boolean = currentPlanTier !== 'pro';
 
-  const handleSignOut = async () => {
-    if (isSupabaseConfigured && currentUser) {
-      await logActivity('LOGOUT', {}, currentUser.id, currentUser.email);
-      await supabase.auth.signOut();
+  const handleAuthAction = async () => {
+    if (currentUser) {
+      if (isSupabaseConfigured) {
+        await logActivity('LOGOUT', {}, currentUser.id, currentUser.email);
+        await supabase.auth.signOut();
+      }
+      setCurrentUser(null);
+      setUserProfile(null);
+      setIsGuestMode(true);
+      showToast('تم تسجيل الخروج بنجاح. أنت الآن في وضع المعاينة السريعة.');
+    } else {
+      setIsAuthModalOpen(true);
     }
-    setCurrentUser(null);
-    setUserProfile(null);
-    setIsGuestMode(false);
-    try {
-      localStorage.removeItem('invocore_guest_session');
-    } catch {}
-    setIsAuthModalOpen(true);
   };
 
   const handleContinueAsGuest = () => {
@@ -323,12 +306,6 @@ export function App() {
       showToast(`أهلاً بك ${profile.full_name || profile.email}! تم تسجيل الدخول بنجاح`);
     }
   };
-
-  const shouldShowAuthGate =
-    !isAuthChecking &&
-    publicInvoiceParam === null &&
-    !currentUser &&
-    !isGuestMode;
 
   // Expose test helper methods on window for automated QA verification
   useEffect(() => {
@@ -1274,26 +1251,6 @@ export function App() {
         dir="rtl"
         className="no-print min-h-screen w-full max-w-[100vw] overflow-x-hidden lg:h-screen lg:overflow-hidden flex flex-col bg-slate-100 text-slate-900"
       >
-        {/* Subtle Admin Setup Banner when Supabase is not configured */}
-        {!isSupabaseConfigured && showSetupBanner && (
-          <div className="bg-amber-950/60 border-b border-amber-500/30 text-amber-200 text-xs px-3 sm:px-5 py-1.5 flex items-center justify-between shrink-0 z-40">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                <strong>وضع المحاكاة المحلي نشط (Demo Sandbox):</strong> اربط بيانات Supabase في ملف <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded text-[11px] font-mono">.env</code> لتفعيل المصادقة وقواعد البيانات السحابية الحقيقية.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSetupBanner(false)}
-              className="text-amber-400 hover:text-white p-1 text-xs cursor-pointer font-bold"
-              title="إغلاق التنبيه"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
         {/* Row 0: Commercial License & User Status Bar */}
         <div className="bg-[#090D16] border-b border-slate-800/80 px-3 sm:px-5 py-2 text-xs flex flex-wrap items-center justify-between gap-2.5 z-40 shrink-0 text-slate-300">
           {/* User Profile & Plan Badge */}
@@ -1301,10 +1258,7 @@ export function App() {
             <div className="flex items-center gap-1.5 font-bold text-slate-200">
               <UserIcon className="w-3.5 h-3.5 text-amber-400" />
               <span>
-                {currentUser?.email ||
-                  (isGuestMode
-                    ? 'زائر تجريبي (⚡ Guest Preview)'
-                    : 'حساب محلي (Demo Local)')}
+                {currentUser?.email || 'زائر تجريبي (⚡ Guest Preview)'}
               </span>
             </div>
 
@@ -1340,12 +1294,21 @@ export function App() {
 
             <button
               type="button"
-              onClick={handleSignOut}
+              onClick={handleAuthAction}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
-              title={currentUser ? 'تسجيل الخروج من الحساب' : 'تسجيل الدخول'}
+              title={currentUser ? 'تسجيل الخروج من الحساب' : 'تسجيل الدخول / إنشاء حساب'}
             >
-              <LogOut className="w-3.5 h-3.5 text-amber-400" />
-              <span>{currentUser ? 'تسجيل الخروج' : 'تسجيل الدخول'}</span>
+              {currentUser ? (
+                <>
+                  <LogOut className="w-3.5 h-3.5 text-amber-400" />
+                  <span>تسجيل الخروج</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                  <span>تسجيل الدخول / إنشاء حساب</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -3385,6 +3348,7 @@ export function App() {
         {isOnboardingOpen && (
           <OnboardingModal
             initialSeller={seller}
+            onClose={() => setIsOnboardingOpen(false)}
             onComplete={(configured) => {
               setSeller(configured);
               saveSellerToStorage(configured);
@@ -3397,7 +3361,8 @@ export function App() {
 
         {/* Supabase Authentication Portal */}
         <AuthModal
-          isOpen={shouldShowAuthGate || isAuthModalOpen}
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
           onSuccess={handleAuthSuccess}
           onContinueAsGuest={handleContinueAsGuest}
         />

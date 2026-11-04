@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -10,20 +10,22 @@ import {
   LogIn,
   Mail,
   ShieldCheck,
-  Sparkles,
   User,
+  X,
   Zap,
 } from 'lucide-react';
 import { isSupabaseConfigured, logActivity, supabase, UserProfile } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
+  onClose: () => void;
   onSuccess: (profile: UserProfile, isGuest?: boolean) => void;
   onContinueAsGuest: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
+  onClose,
   onSuccess,
   onContinueAsGuest,
 }) => {
@@ -41,6 +43,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -211,7 +225,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div
       dir={isAr ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 selection:bg-amber-400 selection:text-slate-900"
+      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 selection:bg-amber-400 selection:text-slate-900 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Top Header */}
@@ -236,14 +255,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
-            {/* Language Toggle */}
-            <button
-              type="button"
-              onClick={() => setLang(isAr ? 'en' : 'ar')}
-              className="text-xs font-bold text-amber-300 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg border border-white/20 transition-colors"
-            >
-              {isAr ? 'English' : 'عربي'}
-            </button>
+            {/* Language Toggle & Close Button */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLang(isAr ? 'en' : 'ar')}
+                className="text-xs font-bold text-amber-300 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg border border-white/20 transition-colors cursor-pointer"
+              >
+                {isAr ? 'English' : 'عربي'}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title={isAr ? 'إغلاق والعودة للمعينة' : 'Close and return to workspace'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <h2 className="text-base sm:text-lg font-black text-white">
@@ -255,18 +285,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ? 'إنشاء حساب تجريبي مجاني (3 فواتير)'
                 : 'Create Free Trial Account (3 Invoices)'}
           </h2>
-
-          {/* Setup notice if Supabase not configured */}
-          {!isSupabaseConfigured && (
-            <div className="mt-2.5 bg-amber-500/15 border border-amber-400/30 rounded-xl px-3 py-1.5 text-[11px] text-amber-200 flex items-center gap-1.5 font-medium">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>
-                {isAr
-                  ? 'وضع العرض المحلي نشط (Demo Sandbox Mode). يمكنك الدخول أو المعاينة كزائر فورًا.'
-                  : 'Demo Sandbox Mode active. You can sign in or use Guest Preview immediately.'}
-              </span>
-            </div>
-          )}
 
           {/* Auth Tab Switcher */}
           <div className="grid grid-cols-2 gap-1.5 mt-4 bg-slate-900/90 p-1 rounded-xl border border-slate-800">

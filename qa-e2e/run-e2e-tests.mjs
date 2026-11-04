@@ -82,71 +82,39 @@ async function runTests() {
     });
 
     // =========================================================================
-    // Test 0: SaaS First-Time Setup & Onboarding Modal Flow
+    // Test 0: Direct Startup in Guest Preview Mode (Zero Blocking Walls)
     // =========================================================================
-    console.log('\n--- Test 0: SaaS First-Time Setup & Onboarding Modal Flow ---');
+    console.log('\n--- Test 0: Direct Startup in Guest Preview Mode (Zero Blocking Walls) ---');
     await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: 'networkidle0' });
 
-    const onboardingCheck = await page.evaluate(async () => {
+    const startupCheck = await page.evaluate(async () => {
+      // Check that no blocking modal is presented on initial startup
       const modal = document.querySelector('.fixed.inset-0.z-50');
-      if (!modal) return { modalFound: false };
+      const hasBlockingModal = !!modal;
 
-      function setReactVal(el, val) {
-        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-        if (nativeSetter) {
-          nativeSetter.call(el, val);
-        } else {
-          el.value = val;
-        }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-
-      // Step 1 inputs inside the modal: input 0 is arabicName, input 3 is taxNumber
-      const inputs = Array.from(modal.querySelectorAll('input'));
-      const nameInput = inputs[0];
-      const vatInput = inputs[3];
-
-      if (nameInput) setReactVal(nameInput, 'شركة الحلول السحابية المتقدمة');
-      if (vatInput) setReactVal(vatInput, '310987654300003');
-
-      // Click Next
-      const nextBtn = Array.from(modal.querySelectorAll('button')).find((b) =>
-        b.innerText.includes('التالي')
-      );
-      if (nextBtn) nextBtn.click();
-      await new Promise((r) => setTimeout(r, 200));
-
-      // Click Finish Setup
-      const finishBtn = Array.from(modal.querySelectorAll('button')).find((b) =>
-        b.innerText.includes('إطلاق') && b.innerText.includes('وبدء الفوترة')
-      );
-      if (finishBtn) finishBtn.click();
-      await new Promise((r) => setTimeout(r, 300));
-
-      const isCompleted = localStorage.getItem('saas_onboarding_completed') === 'true';
-      const savedSeller = JSON.parse(localStorage.getItem('saas_company_settings_v1') || '{}');
+      const bodyText = document.body.innerText;
+      const hasInvoCoreBrand = bodyText.includes('InvoCore');
+      const hasGuestBadge = bodyText.includes('زائر تجريبي') || bodyText.includes('Guest');
+      const hasDefaultCompany = bodyText.includes('إنفو كور');
 
       return {
-        modalFound: true,
-        isCompleted,
-        savedName: savedSeller.arabicName,
-        savedVat: savedSeller.taxNumber,
+        hasBlockingModal,
+        hasInvoCoreBrand,
+        hasGuestBadge,
+        hasDefaultCompany,
       };
     });
 
     record(
-      'SaaS First-Time Setup & Onboarding Wizard',
-      onboardingCheck.modalFound &&
-        onboardingCheck.isCompleted &&
-        onboardingCheck.savedName === 'شركة الحلول السحابية المتقدمة',
-      `Completed: ${onboardingCheck.isCompleted}, Configured Name: "${onboardingCheck.savedName}"`
+      'Direct Startup in Guest Preview Mode (Zero Blocking Walls)',
+      !startupCheck.hasBlockingModal && startupCheck.hasInvoCoreBrand && startupCheck.hasGuestBadge,
+      `No Blocking Modal: ${!startupCheck.hasBlockingModal}, Brand: ${startupCheck.hasInvoCoreBrand}, Guest: ${startupCheck.hasGuestBadge}`
     );
 
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'saas-onboarding-completed.png'),
+      path: path.join(SCREENSHOTS_DIR, 'direct-guest-startup.png'),
     });
 
     // =========================================================================
@@ -388,7 +356,10 @@ async function runTests() {
       const bodyText = document.body.innerText;
       return {
         hasVoucherHeader: bodyText.includes('سند قبض مالي') || bodyText.includes('RECEIPT VOUCHER'),
-        hasCompanyName: bodyText.includes('شركة الحلول السحابية المتقدمة'),
+        hasCompanyName:
+          bodyText.includes('شركة إنفو كور') ||
+          bodyText.includes('InvoCore') ||
+          bodyText.includes('شركة الحلول السحابية المتقدمة'),
       };
     });
 

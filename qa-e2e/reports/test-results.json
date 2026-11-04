@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-11-04T17:16:17.147Z",
+  "timestamp": "2026-11-04T22:20:11.458Z",
   "total": 12,
   "passed": 12,
   "failed": 0,
   "testResults": [
     {
-      "name": "SaaS First-Time Setup & Onboarding Wizard",
+      "name": "Direct Startup in Guest Preview Mode (Zero Blocking Walls)",
       "passed": true,
-      "details": "Completed: true, Configured Name: \"شركة الحلول السحابية المتقدمة\""
+      "details": "No Blocking Modal: true, Brand: true, Guest: true"
     },
     {
       "name": "Clean Blank-Slate Startup (Zero Dummy Client or Line Items)",
