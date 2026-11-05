@@ -1,0 +1,32 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="invocore-doc-grad" x1="40" y1="12" x2="88" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#EAB308" />
+    </linearGradient>
+    <linearGradient id="invocore-cloud-grad" x1="38" y1="56" x2="94" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F2B48" />
+      <stop offset="55%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+    <linearGradient id="invocore-loop-grad" x1="48" y1="70" x2="78" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+  </defs>
+
+  <!-- Stylized Letter "i" (Deep Navy) -->
+  <rect x="12" y="13" width="13" height="13" rx="1.5" fill="#0B192C" />
+  <path d="M 6 36 L 25 36 L 25 80 L 32 80 L 32 88 L 6 88 L 6 80 L 13 80 L 13 44 L 6 44 Z" fill="#0B192C" />
+
+  <!-- Folded Document with Emerald-Gold Gradient -->
+  <path d="M 39 80 L 39 17 C 39 14.5 41 13 43.5 13 L 68 13 L 83 28 L 83 55" stroke="url(#invocore-doc-grad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 67 14 L 67 27 C 67 28 68 29 69 29 L 82 29" stroke="url(#invocore-doc-grad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+  <!-- Verification Checkmark (Emerald) -->
+  <path d="M 50 43 L 58 51 L 71 37" stroke="#10B981" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Financial Cloud Perimeter & Central Loop -->
+  <path d="M 52 87 C 43 87 38 79 41 71 C 43 65 50 63 56 65 C 58 57 66 52 74 54 C 82 56 86 63 85 70 C 91 71 95 76 94 82 C 93 88 88 92 81 92 L 64 92" stroke="url(#invocore-cloud-grad)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 57 80 C 54 75 58 70 64 70 C 70 70 73 75 70 81 C 67 86 60 86 56 83" stroke="url(#invocore-loop-grad)" stroke-width="4.5" stroke-linecap="round" />
+</svg>

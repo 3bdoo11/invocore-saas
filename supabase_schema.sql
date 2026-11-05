@@ -41,6 +41,7 @@ alter table public.activity_logs enable row level security;
 
 -- Profiles RLS Policies:
 -- Users can read their own profile
+drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
   on public.profiles
   for select
@@ -48,6 +49,7 @@ create policy "Users can read own profile"
 
 -- Users can update non-privileged fields on their own profile.
 -- Protect plan_tier and max_trial_invoices: standard users cannot elevate their own tier.
+drop policy if exists "Users can update non-privileged profile info" on public.profiles;
 create policy "Users can update non-privileged profile info"
   on public.profiles
   for update
@@ -61,16 +63,18 @@ create policy "Users can update non-privileged profile info"
 
 -- Activity Logs RLS Policies:
 -- Anyone (authenticated or guest) can insert activity logs
+drop policy if exists "Anyone can insert activity logs" on public.activity_logs;
 create policy "Anyone can insert activity logs"
   on public.activity_logs
   for insert
   with check (true);
 
--- Authenticated users can view their own activity logs
+-- Authenticated users can view their own activity logs (or platform logs)
+drop policy if exists "Users can view own activity logs" on public.activity_logs;
 create policy "Users can view own activity logs"
   on public.activity_logs
   for select
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id or user_id is null or auth.uid() is not null);
 
 -- 4. Automated User Onboarding Trigger on auth.users
 -- Automatically provisions a public.profiles row when a user signs up
@@ -212,14 +216,17 @@ create table if not exists public.tenant_settings (
 create index if not exists idx_tenant_settings_user_id on public.tenant_settings(user_id);
 alter table public.tenant_settings enable row level security;
 
+drop policy if exists "Users can read own tenant settings" on public.tenant_settings;
 create policy "Users can read own tenant settings"
   on public.tenant_settings for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can upsert own tenant settings" on public.tenant_settings;
 create policy "Users can upsert own tenant settings"
   on public.tenant_settings for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own tenant settings" on public.tenant_settings;
 create policy "Users can update own tenant settings"
   on public.tenant_settings for update
   using (auth.uid() = user_id);
@@ -242,10 +249,12 @@ create table if not exists public.catalog_items (
 create index if not exists idx_catalog_items_user_id on public.catalog_items(user_id);
 alter table public.catalog_items enable row level security;
 
+drop policy if exists "Users can view own catalog items" on public.catalog_items;
 create policy "Users can view own catalog items"
   on public.catalog_items for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own catalog items" on public.catalog_items;
 create policy "Users can insert own catalog items"
   on public.catalog_items for insert
   with check (
@@ -256,10 +265,12 @@ create policy "Users can insert own catalog items"
     )
   );
 
+drop policy if exists "Users can update own catalog items" on public.catalog_items;
 create policy "Users can update own catalog items"
   on public.catalog_items for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own catalog items" on public.catalog_items;
 create policy "Users can delete own catalog items"
   on public.catalog_items for delete
   using (auth.uid() = user_id);
@@ -281,10 +292,12 @@ create index if not exists idx_saved_documents_user_id on public.saved_documents
 create index if not exists idx_saved_documents_type on public.saved_documents(doc_type);
 alter table public.saved_documents enable row level security;
 
+drop policy if exists "Users can view own saved documents" on public.saved_documents;
 create policy "Users can view own saved documents"
   on public.saved_documents for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own saved documents" on public.saved_documents;
 create policy "Users can insert own saved documents"
   on public.saved_documents for insert
   with check (
@@ -297,10 +310,12 @@ create policy "Users can insert own saved documents"
     )
   );
 
+drop policy if exists "Users can update own saved documents" on public.saved_documents;
 create policy "Users can update own saved documents"
   on public.saved_documents for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own saved documents" on public.saved_documents;
 create policy "Users can delete own saved documents"
   on public.saved_documents for delete
   using (auth.uid() = user_id);

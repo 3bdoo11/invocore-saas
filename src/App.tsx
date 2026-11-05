@@ -129,6 +129,12 @@ import {
 } from './lib/supabase';
 import { AuthModal } from './components/AuthModal';
 import { TrialLimitModal } from './components/TrialLimitModal';
+import { InvoCoreLogo } from './components/InvoCoreLogo';
+import {
+  JURISDICTIONS,
+  getMarketConfig,
+  TaxJurisdiction,
+} from './constants/jurisdictions';
 import { getTranslation, Language } from './utils/i18n';
 import {
   loadCatalogItemsFromCloud,
@@ -638,11 +644,21 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Active Jurisdiction and Market Config
+  const currentJurisdiction: TaxJurisdiction =
+    invoice.jurisdiction || seller.jurisdiction || 'KSA';
+  const marketConfig = useMemo(
+    () => getMarketConfig(currentJurisdiction),
+    [currentJurisdiction]
+  );
+  const currencySymbol =
+    lang === 'ar' ? marketConfig.currencySymbolAr : marketConfig.currencySymbolEn;
+
   // Financial Calculations & Auto Tafqeet
   const totals = useMemo(() => calculateInvoiceTotals(invoice), [invoice]);
   const autoTafqeet = useMemo(
-    () => numberToArabicTafqeet(totals.finalTotal),
-    [totals.finalTotal]
+    () => numberToArabicTafqeet(totals.finalTotal, currentJurisdiction),
+    [totals.finalTotal, currentJurisdiction]
   );
 
   // Live ZATCA TLV Inspector tags
@@ -1414,6 +1430,45 @@ export function App() {
 
           {/* Action Pod */}
           <div className="flex items-center gap-2">
+            {/* Global Tax Market / Jurisdiction Selector */}
+            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+              {(Object.keys(JURISDICTIONS) as TaxJurisdiction[]).map((jCode) => {
+                const jConfig = JURISDICTIONS[jCode];
+                const isActive = currentJurisdiction === jCode;
+                return (
+                  <button
+                    key={jCode}
+                    type="button"
+                    onClick={() => {
+                      updateInvoice({
+                        jurisdiction: jCode,
+                        vatRate: jConfig.defaultVatRate,
+                        withholdingTaxRate: jCode === 'EGY' ? 1 : 0,
+                        isReverseCharge: false,
+                        qrMode: jCode === 'KSA' ? 'zatca' : 'web',
+                      });
+                      setSeller((prev) => ({ ...prev, jurisdiction: jCode }));
+                      saveSellerToStorage({ ...seller, jurisdiction: jCode });
+                      showToast(
+                        lang === 'ar'
+                          ? `تم ضبط السوق والامتثال: ${jConfig.countryNameAr} (${jConfig.currencySymbolAr})`
+                          : `Market switched: ${jConfig.countryNameEn} (${jConfig.currencySymbolEn})`
+                      );
+                    }}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      isActive
+                        ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/10'
+                    }`}
+                    title={lang === 'ar' ? jConfig.authorityNameAr : jConfig.authorityNameEn}
+                  >
+                    <span>{jConfig.flag}</span>
+                    <span className="hidden sm:inline">{jConfig.code}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Global Language Switcher */}
             <button
               type="button"
@@ -1463,9 +1518,7 @@ export function App() {
             {/* RIGHT POD: Platform Brand & Active Company Identity Pill */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 w-full lg:w-auto min-w-0">
               <div className="flex items-center gap-3 text-right min-w-0 w-full lg:w-auto">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 border border-amber-400/50 flex items-center justify-center shrink-0 shadow-md">
-                  <Layers className="w-5 h-5 text-slate-950" />
-                </div>
+                <InvoCoreLogo size={36} variant="light" />
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h1 className="text-base sm:text-lg font-black tracking-tight text-white leading-none">
@@ -2035,6 +2088,208 @@ export function App() {
                           })}
                         </div>
                       </div>
+                    </section>
+
+                    {/* Multi-Jurisdiction Global Tax & Compliance Engine */}
+                    <section className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-[#B45309]" />
+                          <h2 className="text-xs font-extrabold text-[#0F172A]">
+                            {lang === 'ar' ? 'سوق الفاتورة والامتثال الضريبي' : 'Tax Jurisdiction & Compliance'}
+                          </h2>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          {marketConfig.flag} {lang === 'ar' ? marketConfig.countryNameAr : marketConfig.countryNameEn}
+                        </span>
+                      </div>
+
+                      {/* 4 Market Cards */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {(Object.keys(JURISDICTIONS) as TaxJurisdiction[]).map((jCode) => {
+                          const j = JURISDICTIONS[jCode];
+                          const isCurrent = currentJurisdiction === jCode;
+                          return (
+                            <button
+                              key={jCode}
+                              type="button"
+                              onClick={() => {
+                                updateInvoice({
+                                  jurisdiction: jCode,
+                                  vatRate: j.defaultVatRate,
+                                  withholdingTaxRate: jCode === 'EGY' ? 1 : 0,
+                                  isReverseCharge: false,
+                                  qrMode: jCode === 'KSA' ? 'zatca' : 'web',
+                                });
+                                setSeller((prev) => ({ ...prev, jurisdiction: jCode }));
+                                saveSellerToStorage({ ...seller, jurisdiction: jCode });
+                                showToast(
+                                  lang === 'ar'
+                                    ? `تم التبديل إلى: ${j.countryNameAr} (${j.currencySymbolAr})`
+                                    : `Switched to: ${j.countryNameEn} (${j.currencySymbolEn})`
+                                );
+                              }}
+                              className={`p-2 rounded-lg border text-right transition-all flex flex-col justify-between cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-[#0F172A] text-white border-amber-500 shadow-sm'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-base">{j.flag}</span>
+                                <span className={`text-[9.5px] font-mono px-1 py-0.2 rounded font-bold ${isCurrent ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'}`}>
+                                  {j.currencyCode}
+                                </span>
+                              </div>
+                              <div className="mt-1">
+                                <p className="text-[11px] font-black truncate leading-tight">
+                                  {lang === 'ar' ? j.countryNameAr : j.countryNameEn}
+                                </p>
+                                <p className={`text-[9px] truncate ${isCurrent ? 'text-slate-300' : 'text-slate-500'}`}>
+                                  {lang === 'ar' ? j.authorityNameAr : j.authorityNameEn}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Jurisdiction-Specific Quick Presets & Options */}
+                      {currentJurisdiction === 'EGY' && (
+                        <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900">
+                            <span>خصم ضريبة أرباح تجارية (خصم من المنبع):</span>
+                            <span className="font-mono">{invoice.withholdingTaxRate ?? 1}%</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { label: '0% بدون خصم', rate: 0 },
+                              { label: '1% توريدات', rate: 1 },
+                              { label: '3% خدمات', rate: 3 },
+                            ].map((w) => (
+                              <button
+                                key={w.rate}
+                                type="button"
+                                onClick={() => updateInvoice({ withholdingTaxRate: w.rate })}
+                                className={`py-1 text-[10.5px] font-bold rounded border transition-colors cursor-pointer ${
+                                  (invoice.withholdingTaxRate ?? 1) === w.rate
+                                    ? 'bg-emerald-700 text-white border-emerald-800'
+                                    : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100/50'
+                                }`}
+                              >
+                                {w.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {currentJurisdiction === 'EU' && (
+                        <div className="bg-sky-50/80 border border-sky-200 rounded-lg p-2.5 space-y-2 text-xs">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!invoice.isReverseCharge}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                updateInvoice({
+                                  isReverseCharge: checked,
+                                  vatRate: checked ? 0 : 20,
+                                });
+                              }}
+                              className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                            />
+                            <span className="text-[11px] font-bold text-sky-900">
+                              {lang === 'ar' ? 'تطبيق التكليف العكسي (B2B Reverse Charge - Article 196)' : 'Apply B2B Reverse Charge (Article 196 - 0% VAT)'}
+                            </span>
+                          </label>
+
+                          {!invoice.isReverseCharge && (
+                            <div>
+                              <span className="block text-[10px] font-bold text-sky-800 mb-1">
+                                {lang === 'ar' ? 'معدلات ضريبة القيمة المضافة الأوروبية الشائعة:' : 'Common EU VAT Rates:'}
+                              </span>
+                              <div className="grid grid-cols-4 gap-1">
+                                {[
+                                  { label: 'DE 19%', rate: 19 },
+                                  { label: 'FR 20%', rate: 20 },
+                                  { label: 'ES/NL 21%', rate: 21 },
+                                  { label: '0% معفى', rate: 0 },
+                                ].map((p) => (
+                                  <button
+                                    key={p.rate}
+                                    type="button"
+                                    onClick={() => updateInvoice({ vatRate: p.rate })}
+                                    className={`py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer ${
+                                      (invoice.vatRate ?? 20) === p.rate
+                                        ? 'bg-sky-700 text-white border-sky-800'
+                                        : 'bg-white text-sky-800 border-sky-300 hover:bg-sky-100/60'
+                                    }`}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {currentJurisdiction === 'USA' && (
+                        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 space-y-1.5 text-xs">
+                          <span className="block text-[10px] font-bold text-amber-900">
+                            {lang === 'ar' ? 'معدلات ضريبة المبيعات بالولايات (State Sales Tax):' : 'US State Sales Tax Presets:'}
+                          </span>
+                          <div className="grid grid-cols-4 gap-1">
+                            {[
+                              { label: 'معفى 0%', rate: 0 },
+                              { label: 'TX 6.25%', rate: 6.25 },
+                              { label: 'CA 7.25%', rate: 7.25 },
+                              { label: 'NY 8.875%', rate: 8.875 },
+                            ].map((p) => (
+                              <button
+                                key={p.rate}
+                                type="button"
+                                onClick={() => updateInvoice({ vatRate: p.rate })}
+                                className={`py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer ${
+                                  (invoice.vatRate ?? 8) === p.rate
+                                    ? 'bg-amber-700 text-white border-amber-800'
+                                    : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100/60'
+                                }`}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {currentJurisdiction === 'KSA' && (
+                        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 space-y-1.5 text-xs">
+                          <span className="block text-[10px] font-bold text-amber-900">
+                            {lang === 'ar' ? 'معدلات ضريبة هيئة الزكاة والضريبة (ZATCA):' : 'ZATCA Tax Presets:'}
+                          </span>
+                          <div className="grid grid-cols-2 gap-1">
+                            {[
+                              { label: 'ضريبة قياسية 15%', rate: 15 },
+                              { label: 'صادرات / صفرية 0%', rate: 0 },
+                            ].map((p) => (
+                              <button
+                                key={p.rate}
+                                type="button"
+                                onClick={() => updateInvoice({ vatRate: p.rate })}
+                                className={`py-1 text-[10.5px] font-bold rounded border transition-colors cursor-pointer ${
+                                  (invoice.vatRate ?? 15) === p.rate
+                                    ? 'bg-amber-700 text-white border-amber-800'
+                                    : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100/60'
+                                }`}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </section>
 
                     {/* Section A: Single Default Web PDF QR Selector */}
@@ -2854,8 +3109,8 @@ export function App() {
 
                         {totals.totalDiscount > 0 && (
                           <div className="text-[11px] font-bold text-[#B45309] bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 flex items-center justify-between num-tabular">
-                            <span>إجمالي الخصم المقتطع قبل الضريبة:</span>
-                            <span>{formatMoney(totals.totalDiscount)} ر.س</span>
+                            <span>{lang === 'ar' ? 'إجمالي الخصم المقتطع قبل الضريبة:' : 'Total Discount before Tax:'}</span>
+                            <span>{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
                           </div>
                         )}
                       </div>
@@ -2864,36 +3119,52 @@ export function App() {
                       <div className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100 text-xs">
                         <div className="px-3 py-2 flex justify-between">
                           <span className="text-slate-600 font-semibold">
-                            الإجمالي قبل الضريبة:
+                            {lang === 'ar' ? 'الإجمالي قبل الضريبة:' : 'Subtotal before Tax:'}
                           </span>
                           <span className="num-tabular font-bold text-slate-900">
-                            {formatMoney(totals.subtotal)} ر.س
+                            {formatMoney(totals.subtotal)} {currencySymbol}
                           </span>
                         </div>
                         {totals.totalDiscount > 0 && (
                           <div className="px-3 py-2 flex justify-between bg-amber-50/40">
                             <span className="text-slate-700 font-bold">
-                              الصافي الخاضع للضريبة (بعد الخصم):
+                              {lang === 'ar' ? 'الصافي الخاضع للضريبة (بعد الخصم):' : 'Taxable Net (after Discount):'}
                             </span>
                             <span className="num-tabular font-bold text-[#92400E]">
-                              {formatMoney(totals.taxableAmount)} ر.س
+                              {formatMoney(totals.taxableAmount)} {currencySymbol}
                             </span>
                           </div>
                         )}
                         <div className="px-3 py-2 flex justify-between">
                           <span className="text-slate-600 font-semibold">
-                            ضريبة القيمة المضافة ({totals.vatRate}%):
+                            {lang === 'ar' ? marketConfig.taxShortLabelAr : marketConfig.taxShortLabelEn} ({totals.vatRate}%):
                           </span>
                           <span className="num-tabular font-bold text-[#B45309]">
-                            {formatMoney(totals.vatAmount)} ر.س
+                            {formatMoney(totals.vatAmount)} {currencySymbol}
                           </span>
                         </div>
+                        {totals.withholdingTaxAmount !== undefined && totals.withholdingTaxAmount > 0 && (
+                          <div className="px-3 py-2 flex justify-between bg-rose-50/60 text-rose-700">
+                            <span className="font-bold">
+                              {lang === 'ar' ? `خصم أرباح تجارية (خصم من المنبع ${totals.withholdingTaxRate}%):` : `Withholding Tax Deduction (${totals.withholdingTaxRate}%):`}
+                            </span>
+                            <span className="num-tabular font-bold">
+                              - {formatMoney(totals.withholdingTaxAmount)} {currencySymbol}
+                            </span>
+                          </div>
+                        )}
+                        {totals.isReverseCharge && (
+                          <div className="px-3 py-1.5 bg-sky-50 text-sky-800 text-[10.5px] font-bold border-t border-sky-100 flex items-center justify-between">
+                            <span>{lang === 'ar' ? 'تكليف عكسي (EU Reverse Charge - Art. 196)' : 'B2B Reverse Charge - Art. 196'}</span>
+                            <span className="bg-sky-200/80 text-sky-900 px-1.5 py-0.5 rounded font-mono">0% VAT</span>
+                          </div>
+                        )}
                         <div className="px-3 py-2.5 flex justify-between bg-[#0F172A] text-white rounded-b-lg">
                           <span className="font-extrabold">
-                            صافي مبلغ الفاتورة:
+                            {lang === 'ar' ? 'صافي مبلغ الفاتورة:' : 'Total Invoice Amount:'}
                           </span>
                           <span className="num-tabular font-black text-amber-400 text-sm">
-                            {formatMoney(totals.finalTotal)} ر.س
+                            {formatMoney(totals.finalTotal)} {currencySymbol}
                           </span>
                         </div>
                       </div>

@@ -8,6 +8,8 @@ export type TemplateStyle = 'modern' | 'classic' | 'minimalist';
 
 export type DocumentPrintView = 'invoice' | 'receipt' | 'both';
 
+export type TaxJurisdiction = 'KSA' | 'EGY' | 'USA' | 'EU';
+
 export interface CatalogItem {
   id: string;
   name: string;
@@ -54,6 +56,7 @@ export interface SellerInfo {
   additionalNo?: string;
   specialty?: string;
   salesperson?: string;
+  jurisdiction?: TaxJurisdiction; // 'KSA' | 'EGY' | 'USA' | 'EU'
 }
 
 export interface ClientInfo {
@@ -105,6 +108,9 @@ export interface InvoiceData {
   paidAmount: number;
   tafqeetManual: string | null; // null = auto-generated Arabic Tafqeet
   qrMode: QrEncodingMode;
+  jurisdiction?: TaxJurisdiction;
+  withholdingTaxRate?: number; // EGY WHT e.g. 1% or 3%
+  isReverseCharge?: boolean; // EU Article 196 reverse charge
   status: 'draft' | 'issued';
   issuedAt?: string;
   companyId?: string;
@@ -116,13 +122,16 @@ export interface InvoiceTotals {
   subtotal: number;
   discountType: DiscountType;
   discountInput: number;
-  discountAmount: number; // resolved SAR amount from % or fixed
+  discountAmount: number; // resolved currency amount from % or fixed
   invoiceDiscount: number;
   totalDiscount: number; // discountAmount + invoiceDiscount
   taxableAmount: number; // subtotal - totalDiscount (BEFORE VAT)
-  vatRate: number; // e.g. 15
+  vatRate: number; // e.g. 15, 14, 8, 20
   vatAmount: number; // taxableAmount * (vatRate / 100)
-  finalTotal: number; // taxableAmount + vatAmount
+  withholdingTaxRate?: number;
+  withholdingTaxAmount?: number;
+  isReverseCharge?: boolean;
+  finalTotal: number; // taxableAmount + vatAmount - withholdingTaxAmount
   paidAmount: number;
   remainingBalance: number;
 }

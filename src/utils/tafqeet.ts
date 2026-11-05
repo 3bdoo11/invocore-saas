@@ -197,54 +197,50 @@ function convertIntegerToArabic(n: number, feminine = false): string {
  * - 2249917.50 -> "اثنان مليون ومئتان وتسعة وأربعون ألفاً وتسعمائة وسبعة عشر ريالاً وخمسون هللة فقط لا غير"
  * - 2227.00    -> "ألفان ومئتان وسبعة وعشرون ريالاً سعودياً فقط لا غير"
  */
-export function numberToArabicTafqeet(amount: number): string {
-  const safeAmount = Math.max(0, round2(Number.isFinite(amount) ? amount : 0));
-  const riyals = Math.floor(safeAmount);
-  const halalas = Math.round((safeAmount - riyals) * 100);
+import { TaxJurisdiction, getMarketConfig } from '../constants/jurisdictions';
 
-  if (riyals === 0 && halalas === 0) {
-    return 'صفر ريال سعودي فقط لا غير';
+export function numberToArabicTafqeet(
+  amount: number,
+  jurisdiction: TaxJurisdiction = 'KSA'
+): string {
+  const safeAmount = Math.max(0, round2(Number.isFinite(amount) ? amount : 0));
+  const major = Math.floor(safeAmount);
+  const minor = Math.round((safeAmount - major) * 100);
+
+  const market = getMarketConfig(jurisdiction);
+  const majorName = market.majorUnitAr;
+  const minorName = market.minorUnitAr;
+
+  if (major === 0 && minor === 0) {
+    return `صفر ${majorName} فقط لا غير`;
   }
 
   const parts: string[] = [];
 
-  if (riyals > 0) {
-    const rem100 = riyals % 100;
-    const hasHalalas = halalas > 0;
-    if (riyals === 1) {
-      parts.push(hasHalalas ? 'ريال واحد' : 'ريال سعودي واحد');
-    } else if (riyals === 2) {
-      parts.push(hasHalalas ? 'ريالان اثنان' : 'ريالان سعوديان');
+  if (major > 0) {
+    const rem100 = major % 100;
+    if (major === 1) {
+      parts.push(`${majorName} واحد`);
+    } else if (major === 2) {
+      parts.push(`اثنان ${majorName}`);
     } else if (rem100 >= 3 && rem100 <= 10) {
-      parts.push(
-        `${convertIntegerToArabic(riyals, false)} ${
-          hasHalalas ? 'ريالات' : 'ريالات سعودية'
-        }`
-      );
+      parts.push(`${convertIntegerToArabic(major, false)} ${majorName}`);
     } else if (rem100 >= 11 && rem100 <= 99) {
-      parts.push(
-        `${convertIntegerToArabic(riyals, false)} ${
-          hasHalalas ? 'ريالاً' : 'ريالاً سعودياً'
-        }`
-      );
+      parts.push(`${convertIntegerToArabic(major, false)} ${majorName}`);
     } else {
-      parts.push(
-        `${convertIntegerToArabic(riyals, false)} ${
-          hasHalalas ? 'ريال' : 'ريال سعودي'
-        }`
-      );
+      parts.push(`${convertIntegerToArabic(major, false)} ${majorName}`);
     }
   }
 
-  if (halalas > 0) {
-    if (halalas === 1) {
-      parts.push('هللة واحدة');
-    } else if (halalas === 2) {
-      parts.push('هللتان');
-    } else if (halalas >= 3 && halalas <= 10) {
-      parts.push(`${convertIntegerToArabic(halalas, true)} هللات`);
+  if (minor > 0) {
+    if (minor === 1) {
+      parts.push(`${minorName} واحد`);
+    } else if (minor === 2) {
+      parts.push(`اثنان ${minorName}`);
+    } else if (minor >= 3 && minor <= 10) {
+      parts.push(`${convertIntegerToArabic(minor, true)} ${minorName}`);
     } else {
-      parts.push(`${convertIntegerToArabic(halalas, true)} هللة`);
+      parts.push(`${convertIntegerToArabic(minor, true)} ${minorName}`);
     }
   }
 

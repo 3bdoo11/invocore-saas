@@ -14,6 +14,8 @@ import {
   generateZatcaQrBase64,
 } from '../utils/zatcaQr';
 import { TrialWatermark } from './TrialWatermark';
+import { InvoCoreLogo } from './InvoCoreLogo';
+import { getMarketConfig } from '../constants/jurisdictions';
 
 export interface UniversalInvoiceProps {
   invoice: InvoiceData;
@@ -37,6 +39,12 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
   const isAr = lang === 'ar';
   const totals = useMemo(() => calculateInvoiceTotals(invoice), [invoice]);
 
+  const market = useMemo(
+    () => getMarketConfig(invoice.jurisdiction || seller.jurisdiction || 'KSA'),
+    [invoice.jurisdiction, seller.jurisdiction]
+  );
+  const currencySymbol = isAr ? market.currencySymbolAr : market.currencySymbolEn;
+
   const pages = useMemo(
     () => paginateInvoiceItems(invoice.items),
     [invoice.items]
@@ -44,9 +52,9 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
 
   const autoTafqeet = useMemo(() => {
     return isAr
-      ? numberToArabicTafqeet(totals.finalTotal)
-      : numberToEnglishWords(totals.finalTotal);
-  }, [totals.finalTotal, isAr]);
+      ? numberToArabicTafqeet(totals.finalTotal, market.code)
+      : numberToEnglishWords(totals.finalTotal, market.majorUnitEn, market.minorUnitEn);
+  }, [totals.finalTotal, isAr, market]);
 
   const displayedTafqeet =
     invoice.tafqeetManual && invoice.tafqeetManual.trim() !== ''
@@ -116,11 +124,8 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         className="max-h-16 max-w-36 object-contain rounded-lg border border-slate-200 p-1"
                       />
                     ) : (
-                      <div
-                        style={{ backgroundColor: `${primaryColor}15`, color: primaryColor, borderColor: primaryColor }}
-                        className="w-14 h-14 rounded-xl border flex items-center justify-center font-black text-xl shadow-xs"
-                      >
-                        {isAr ? (seller.arabicName ? seller.arabicName.slice(0, 2) : 'IC') : (seller.englishName ? seller.englishName.slice(0, 2) : 'IC')}
+                      <div className="p-1 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">
+                        <InvoCoreLogo size={46} variant="dark" />
                       </div>
                     )}
                     <div>
@@ -139,10 +144,10 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                       )}
                       <div className="text-[10px] font-semibold text-slate-600 mt-1 flex flex-wrap gap-2 num-tabular">
                         {seller.crNumber && (
-                          <span>{isAr ? 'س.ت:' : 'CR:'} <strong>{seller.crNumber}</strong></span>
+                          <span>{isAr ? `${market.crNumberLabelAr}:` : `${market.crNumberLabelEn}:`} <strong>{seller.crNumber}</strong></span>
                         )}
                         {seller.taxNumber && (
-                          <span>{isAr ? 'الرقم الضريبي:' : 'VAT:'} <strong>{seller.taxNumber}</strong></span>
+                          <span>{isAr ? `${market.taxNumberLabelAr}:` : `${market.taxNumberLabelEn}:`} <strong>{seller.taxNumber}</strong></span>
                         )}
                       </div>
                       {seller.address && (
@@ -157,9 +162,9 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                       style={{ backgroundColor: primaryColor }}
                       className="text-white px-3.5 py-1.5 rounded-lg text-center shadow-xs"
                     >
-                      <div className="text-[13px] font-black">{isAr ? 'فاتورة ضريبية' : 'TAX INVOICE'}</div>
+                      <div className="text-[13px] font-black">{isAr ? market.invoiceTitleAr : market.invoiceTitleEn}</div>
                       <div className="text-[8.5px] font-bold tracking-widest uppercase opacity-90">
-                        {isAr ? 'TAX INVOICE' : 'SIMPLIFIED VAT INVOICE'}
+                        {isAr ? market.authorityNameAr : market.authorityNameEn}
                       </div>
                     </div>
                     <div className="text-[11px] font-extrabold text-slate-700 mt-2 space-y-0.5 num-tabular" dir="ltr">
@@ -179,7 +184,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                       {isAr ? (seller.arabicName || 'منصة InvoCore') : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
                     </h1>
                     <div className="text-[10px] font-bold text-slate-600 num-tabular mt-0.5">
-                      {isAr ? 'سجل تجاري:' : 'CR:'} {seller.crNumber || '—'} | {isAr ? 'الرقم الضريبي:' : 'VAT:'} {seller.taxNumber || '—'}
+                      {isAr ? market.crNumberLabelAr : market.crNumberLabelEn}: {seller.crNumber || '—'} | {isAr ? market.taxNumberLabelAr : market.taxNumberLabelEn}: {seller.taxNumber || '—'}
                     </div>
                     <div className="text-[9.5px] text-slate-500 mt-0.5">{seller.address}</div>
                   </div>
@@ -188,15 +193,12 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                     {seller.logoDataUrl ? (
                       <img src={seller.logoDataUrl} alt="Logo" className="max-h-14 max-w-28 object-contain mb-1" />
                     ) : (
-                      <div
-                        style={{ borderColor: primaryColor, color: primaryColor }}
-                        className="w-12 h-12 rounded-full border-2 flex items-center justify-center font-black text-base mb-1"
-                      >
-                        {seller.arabicName ? seller.arabicName.slice(0, 1) : 'I'}
+                      <div className="mb-1">
+                        <InvoCoreLogo size={42} variant="dark" />
                       </div>
                     )}
                     <div className="border border-slate-800 rounded px-2 py-0.5 text-[11px] font-black bg-slate-100">
-                      {isAr ? 'فاتورة ضريبية' : 'TAX INVOICE'}
+                      {isAr ? market.invoiceTitleAr : market.invoiceTitleEn}
                     </div>
                   </div>
 
@@ -222,10 +224,10 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                      {isAr ? 'فاتورة ضريبية' : 'TAX INVOICE'}
+                      {isAr ? market.invoiceTitleAr : market.invoiceTitleEn}
                     </h1>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      TAX INVOICE • VAT COMPLIANT
+                      {isAr ? market.authorityNameAr : market.authorityNameEn}
                     </div>
                     <div className="pt-2 text-[11.5px] font-bold text-slate-700 space-y-0.5 num-tabular">
                       <div>{isAr ? 'رقم الفاتورة:' : 'Invoice No:'} <span className="font-extrabold text-slate-900">#{invoice.invoiceNumber}</span></div>
@@ -242,11 +244,13 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         {seller.englishName || 'InvoCore Platform'}
                       </div>
                       <div className="text-[10px] font-semibold text-slate-500 num-tabular">
-                        {isAr ? 'س.ت:' : 'CR:'} {seller.crNumber} | {isAr ? 'الرقم الضريبي:' : 'VAT:'} {seller.taxNumber}
+                        {isAr ? market.crNumberLabelAr : market.crNumberLabelEn}: {seller.crNumber} | {isAr ? market.taxNumberLabelAr : market.taxNumberLabelEn}: {seller.taxNumber}
                       </div>
                     </div>
-                    {seller.logoDataUrl && (
+                    {seller.logoDataUrl ? (
                       <img src={seller.logoDataUrl} alt="Logo" className="max-h-14 max-w-28 object-contain" />
+                    ) : (
+                      <InvoCoreLogo size={42} variant="dark" />
                     )}
                   </div>
                 </div>
@@ -318,9 +322,9 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                     <th className="py-2 px-2 w-16">{isAr ? 'الوحدة' : 'Unit'}</th>
                     <th className="py-2 px-2 w-16">{isAr ? 'الكمية' : 'Qty'}</th>
                     <th className="py-2 px-2 w-20">{isAr ? 'سعر الوحدة' : 'Unit Price'}</th>
-                    <th className="py-2 px-2 w-16">{isAr ? 'الضريبة' : 'VAT'}</th>
+                    <th className="py-2 px-2 w-16">{isAr ? market.taxShortLabelAr : market.taxShortLabelEn}</th>
                     <th className="py-2 px-2 w-24">
-                      {isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'}
+                      {isAr ? `الإجمالي (${currencySymbol})` : `Total (${currencySymbol})`}
                     </th>
                   </tr>
                 </thead>
@@ -328,7 +332,8 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                   {pageData.items.map((item, idx) => {
                     const rowNo = pageData.startIndex + idx + 1;
                     const lineSubtotal = (Number(item.qty) || 0) * (Number(item.unitPrice) || 0);
-                    const vatAmount = lineSubtotal * ((invoice.vatRate ?? 15) / 100);
+                    const lineVatRate = invoice.isReverseCharge ? 0 : (invoice.vatRate ?? market.defaultVatRate);
+                    const vatAmount = lineSubtotal * (lineVatRate / 100);
                     const lineTotal = lineSubtotal + vatAmount;
 
                     return (
@@ -345,7 +350,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         <td className="py-2.5 px-1.5 text-slate-600 font-bold">{item.unit || (isAr ? 'وحدة' : 'Unit')}</td>
                         <td className="py-2.5 px-1.5 num-tabular font-extrabold">{formatQty(item.qty)}</td>
                         <td className="py-2.5 px-1.5 num-tabular font-bold">{formatMoney(item.unitPrice)}</td>
-                        <td className="py-2.5 px-1.5 num-tabular text-slate-500">{invoice.vatRate ?? 15}%</td>
+                        <td className="py-2.5 px-1.5 num-tabular text-slate-500">{lineVatRate}%</td>
                         <td className="py-2.5 px-2 num-tabular font-black text-slate-950">{formatMoney(lineTotal)}</td>
                       </tr>
                     );
@@ -377,31 +382,45 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                         <span dir="ltr" className="font-mono font-bold">IBAN: {seller.iban}</span>
                       </div>
                     )}
+
+                    {totals.isReverseCharge && (
+                      <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-2 text-[10px] font-bold text-blue-900">
+                        {isAr
+                          ? 'إقرار ضريبي: خاضع لآلية التكليف العكسي (المادة 196 من توجيه المجلس الأوروبي 2006/112/EC) — تلتزم المنشأة المستلمة بسداد الضريبة.'
+                          : 'Tax Legal Notice: B2B Reverse Charge applies (Article 196 Council Directive 2006/112/EC) — VAT to be accounted for by recipient.'}
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column: Financial Totals Breakdown */}
                   <div className="col-span-5 border border-slate-300 rounded-xl overflow-hidden bg-white text-xs">
                     <div className="divide-y divide-slate-100">
                       <div className="flex justify-between p-2 font-bold text-slate-700 num-tabular">
-                        <span>{isAr ? 'المجموع الفرعي (غير شامل الضريبة):' : 'Subtotal (Excl. VAT):'}</span>
-                        <span>{formatMoney(totals.subtotal)} {isAr ? 'ر.س' : 'SAR'}</span>
+                        <span>{isAr ? `المجموع الفرعي (قبل ${market.taxShortLabelAr}):` : `Subtotal (Excl. ${market.taxShortLabelEn}):`}</span>
+                        <span>{formatMoney(totals.subtotal)} {currencySymbol}</span>
                       </div>
                       {totals.totalDiscount > 0 && (
                         <div className="flex justify-between p-2 font-bold text-rose-700 num-tabular">
                           <span>{isAr ? 'إجمالي الخصم:' : 'Discount:'}</span>
-                          <span>-{formatMoney(totals.totalDiscount)} {isAr ? 'ر.س' : 'SAR'}</span>
+                          <span>-{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
                         </div>
                       )}
                       <div className="flex justify-between p-2 font-bold text-slate-700 num-tabular">
-                        <span>{isAr ? `ضريبة القيمة المضافة (${totals.vatRate}%):` : `VAT (${totals.vatRate}%):`}</span>
-                        <span>{formatMoney(totals.vatAmount)} {isAr ? 'ر.س' : 'SAR'}</span>
+                        <span>{isAr ? `${market.taxShortLabelAr} (${totals.vatRate}%):` : `${market.taxShortLabelEn} (${totals.vatRate}%):`}</span>
+                        <span>{formatMoney(totals.vatAmount)} {currencySymbol}</span>
                       </div>
+                      {totals.withholdingTaxAmount && totals.withholdingTaxAmount > 0 ? (
+                        <div className="flex justify-between p-2 font-bold text-amber-700 bg-amber-50/70 num-tabular">
+                          <span>{isAr ? `خصم وتحصيل من المنبع (${totals.withholdingTaxRate}%):` : `Withholding Tax (-${totals.withholdingTaxRate}%):`}</span>
+                          <span>-{formatMoney(totals.withholdingTaxAmount)} {currencySymbol}</span>
+                        </div>
+                      ) : null}
                       <div
                         style={{ backgroundColor: primaryColor }}
                         className="flex justify-between p-2.5 font-black text-white text-sm num-tabular"
                       >
-                        <span>{isAr ? 'الإجمالي الكلي شامل الضريبة:' : 'Grand Total (Incl. VAT):'}</span>
-                        <span>{formatMoney(totals.finalTotal)} {isAr ? 'ر.س' : 'SAR'}</span>
+                        <span>{isAr ? 'الصافي الإجمالي المستحق:' : 'Net Total Due:'}</span>
+                        <span>{formatMoney(totals.finalTotal)} {currencySymbol}</span>
                       </div>
                     </div>
                   </div>

@@ -15,6 +15,8 @@ import { numberToArabicTafqeet } from '../utils/tafqeet';
 import { numberToEnglishWords } from '../utils/numberToWordsEn';
 import { encodePublicInvoiceUrl } from '../utils/zatcaQr';
 import { TrialWatermark } from './TrialWatermark';
+import { InvoCoreLogo } from './InvoCoreLogo';
+import { getMarketConfig } from '../constants/jurisdictions';
 
 interface ReceiptVoucherA4SheetProps {
   invoice: InvoiceData;
@@ -31,6 +33,12 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
 }) => {
   const isAr = lang === 'ar';
   const totals = useMemo(() => calculateInvoiceTotals(invoice), [invoice]);
+
+  const market = useMemo(
+    () => getMarketConfig(invoice.jurisdiction || seller.jurisdiction || 'KSA'),
+    [invoice.jurisdiction, seller.jurisdiction]
+  );
+  const currencySymbol = isAr ? market.currencySymbolAr : market.currencySymbolEn;
 
   const rv = invoice.receiptVoucher || {};
 
@@ -61,8 +69,11 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
         : totals.finalTotal;
 
   const autoAmountWords = useMemo(
-    () => (isAr ? numberToArabicTafqeet(voucherAmount) : numberToEnglishWords(voucherAmount)),
-    [voucherAmount, isAr]
+    () =>
+      isAr
+        ? numberToArabicTafqeet(voucherAmount, market.code)
+        : numberToEnglishWords(voucherAmount, market.majorUnitEn, market.minorUnitEn),
+    [voucherAmount, isAr, market]
   );
 
   const displayedAmountWords =
@@ -125,11 +136,8 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
                 className="max-h-16 max-w-36 object-contain rounded-lg border border-slate-200 p-1 bg-white"
               />
             ) : (
-              <div
-                style={{ backgroundColor: `${primaryColor}15`, color: primaryColor, borderColor: primaryColor }}
-                className="w-14 h-14 rounded-xl border flex items-center justify-center font-black text-xl shadow-xs"
-              >
-                {isAr ? (seller.arabicName ? seller.arabicName.slice(0, 2) : 'IC') : (seller.englishName ? seller.englishName.slice(0, 2) : 'IC')}
+              <div className="p-1 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">
+                <InvoCoreLogo size={46} variant="dark" />
               </div>
             )}
             <div>
@@ -196,7 +204,7 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
               style={{ color: primaryColor }}
               className="text-2xl font-black font-mono tracking-tight num-tabular"
             >
-              {formatMoney(voucherAmount)} {isAr ? 'ر.س' : 'SAR'}
+              {formatMoney(voucherAmount)} {currencySymbol}
             </div>
           </div>
 
@@ -276,15 +284,15 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
           <div className="col-span-4 border border-slate-300 rounded-xl p-3 bg-white space-y-1.5 text-[11px] num-tabular">
             <div className="flex justify-between text-slate-600">
               <span>{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
-              <span className="font-bold">{formatMoney(totals.finalTotal)} {isAr ? 'ر.س' : 'SAR'}</span>
+              <span className="font-bold">{formatMoney(totals.finalTotal)} {currencySymbol}</span>
             </div>
             <div className="flex justify-between text-emerald-700 font-bold border-t border-slate-100 pt-1">
               <span>{isAr ? 'المدفوع بهذا السند:' : 'Paid via Voucher:'}</span>
-              <span>{formatMoney(voucherAmount)} {isAr ? 'ر.س' : 'SAR'}</span>
+              <span>{formatMoney(voucherAmount)} {currencySymbol}</span>
             </div>
             <div className="flex justify-between text-slate-900 font-black border-t border-slate-200 pt-1 text-xs">
               <span>{isAr ? 'الرصيد المتبقي:' : 'Balance Due:'}</span>
-              <span>{formatMoney(remainingBalance)} {isAr ? 'ر.س' : 'SAR'}</span>
+              <span>{formatMoney(remainingBalance)} {currencySymbol}</span>
             </div>
           </div>
         </div>

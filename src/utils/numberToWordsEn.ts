@@ -62,6 +62,16 @@ function convertThreeDigits(num: number): string {
   return str;
 }
 
+import { TaxJurisdiction, getMarketConfig } from '../constants/jurisdictions';
+
+export function formatEnglishTafqeetWithJurisdiction(
+  amount: number,
+  jurisdiction: TaxJurisdiction = 'KSA'
+): string {
+  const market = getMarketConfig(jurisdiction);
+  return numberToEnglishWords(amount, market.majorUnitEn, market.minorUnitEn);
+}
+
 export function numberToEnglishWords(
   amount: number,
   currencyName = 'Saudi Riyals',

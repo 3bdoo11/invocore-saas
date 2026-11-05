@@ -17,6 +17,7 @@ import {
 import { SellerInfo } from '../types/invoice';
 import { BRAND_COLOR_PRESETS, TEMPLATE_STYLES } from '../constants/defaults';
 import { compressAndResizeImage } from '../utils/imageUtils';
+import { JURISDICTIONS, getMarketConfig, TaxJurisdiction } from '../constants/jurisdictions';
 
 interface CompanySettingsTabProps {
   seller: SellerInfo;
@@ -117,6 +118,51 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Column 1: Company Profile & Tax Info (7 cols) */}
         <div className="md:col-span-7 space-y-5">
+          {/* Card 0: Market / Tax Jurisdiction Selector */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-600" />
+                <span>نطاق الامتثال الضريبي والسوق الافتراضي (Market Jurisdiction)</span>
+              </h3>
+              <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                {getMarketConfig(seller.jurisdiction).flag} {getMarketConfig(seller.jurisdiction).currencyCode}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(JURISDICTIONS) as TaxJurisdiction[]).map((jKey) => {
+                const item = JURISDICTIONS[jKey];
+                const isSelected = (seller.jurisdiction || 'KSA') === jKey;
+                return (
+                  <button
+                    key={jKey}
+                    type="button"
+                    onClick={() => onUpdateSeller({ ...seller, jurisdiction: jKey })}
+                    className={`p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50/50 shadow-xs ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg">{item.flag}</span>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                        isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {item.currencyCode} ({item.currencySymbolAr})
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-slate-900">{item.countryNameAr}</div>
+                      <div className="text-[10px] font-bold text-slate-500 mt-0.5 truncate">{item.authorityNameAr}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Card: Legal Information */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
             <h3 className="text-xs font-black text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
@@ -155,28 +201,28 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    رقم السجل التجاري (CR) *
+                    {getMarketConfig(seller.jurisdiction).crNumberLabelAr} *
                   </label>
                   <input
                     type="text"
                     dir="ltr"
                     value={seller.crNumber}
                     onChange={(e) => onUpdateSeller({ ...seller, crNumber: e.target.value })}
-                    placeholder="1010XXXXXX"
+                    placeholder={getMarketConfig(seller.jurisdiction).crNumberPlaceholder}
                     className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    الرقم الضريبي (ZATCA VAT) *
+                    {getMarketConfig(seller.jurisdiction).taxNumberLabelAr} *
                   </label>
                   <input
                     type="text"
                     dir="ltr"
                     value={seller.taxNumber}
                     onChange={(e) => onUpdateSeller({ ...seller, taxNumber: e.target.value })}
-                    placeholder="300XXXXXXXXX003"
+                    placeholder={getMarketConfig(seller.jurisdiction).taxNumberPlaceholder}
                     className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
                   />
                 </div>

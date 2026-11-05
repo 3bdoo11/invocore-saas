@@ -9,7 +9,6 @@ import {
   EyeOff,
   Globe,
   KeyRound,
-  Layers,
   Lock,
   LogIn,
   Mail,
@@ -26,6 +25,7 @@ import {
   supabase,
   UserProfile,
 } from '../lib/supabase';
+import { InvoCoreLogo } from './InvoCoreLogo';
 
 export type AuthModalView = 'signin' | 'signup' | 'verify_otp' | 'forgot_password';
 
@@ -557,18 +557,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     >
       <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Top Header */}
-        <div className="bg-[#0F172A] text-white p-5 sm:p-6 relative overflow-hidden border-b-2 border-amber-500 shrink-0">
+        <div className="bg-[#0F172A] text-white p-5 sm:p-6 relative overflow-hidden border-b-2 border-emerald-500 shrink-0">
           <div className="flex items-center justify-between relative z-10 mb-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-md border border-amber-400/40">
-                <Layers className="w-5 h-5 text-slate-950" />
+              <div className="p-1 rounded-xl bg-white/5 border border-white/10 shadow-md">
+                <InvoCoreLogo size={36} variant="light" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xl font-black tracking-tight text-white">
-                    Invo<span className="text-amber-400">Core</span>
+                    Invo<span className="text-emerald-400">Core</span>
                   </span>
-                  <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30">
+                  <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-400/30">
                     B2B SaaS
                   </span>
                 </div>

@@ -251,6 +251,9 @@ export function calculateInvoiceTotals(
   > & {
     discountType?: InvoiceData['discountType'];
     vatRate?: InvoiceData['vatRate'];
+    jurisdiction?: InvoiceData['jurisdiction'];
+    withholdingTaxRate?: InvoiceData['withholdingTaxRate'];
+    isReverseCharge?: InvoiceData['isReverseCharge'];
   }
 ): InvoiceTotals {
   const subtotal = round2(
@@ -282,12 +285,29 @@ export function calculateInvoiceTotals(
 
   // Deduct discount BEFORE calculating VAT
   const taxableAmount = Math.max(0, round2(subtotal - totalDiscount));
-  const vatRate =
+
+  // Handle EU Reverse Charge (Article 196: VAT is 0%)
+  const isReverseCharge = Boolean(invoice.isReverseCharge);
+  let vatRate =
     invoice.vatRate !== undefined && Number.isFinite(Number(invoice.vatRate))
       ? Math.max(0, Number(invoice.vatRate))
       : 15;
+  if (isReverseCharge) {
+    vatRate = 0;
+  }
+
   const vatAmount = round2(taxableAmount * (vatRate / 100));
-  const finalTotal = round2(taxableAmount + vatAmount);
+
+  // Handle Egypt Withholding Tax (WHT / ضريبة الخصم والتحصيل من المنبع)
+  const withholdingTaxRate = Number(invoice.withholdingTaxRate) || 0;
+  const withholdingTaxAmount = withholdingTaxRate > 0
+    ? round2(taxableAmount * (withholdingTaxRate / 100))
+    : 0;
+
+  const finalTotal = Math.max(
+    0,
+    round2(taxableAmount + vatAmount - withholdingTaxAmount)
+  );
   const paidAmount = Math.max(0, round2(Number(invoice.paidAmount) || 0));
   const remainingBalance = Math.max(0, round2(finalTotal - paidAmount));
 
@@ -301,6 +321,9 @@ export function calculateInvoiceTotals(
     taxableAmount,
     vatRate,
     vatAmount,
+    withholdingTaxRate,
+    withholdingTaxAmount,
+    isReverseCharge,
     finalTotal,
     paidAmount,
     remainingBalance,
