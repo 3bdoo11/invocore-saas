@@ -168,10 +168,11 @@ export function createFreshBlankInvoice(
     items: [
       {
         id: generateId('row'),
-        description: '',
-        unit: 'وحدة',
+        itemCode: 'SaaS-101',
+        description: 'Cloud Infrastructure & API Integration / تطوير وربط البنية السحابية',
+        unit: 'خدمة',
         qty: 1,
-        unitPrice: 0,
+        unitPrice: 1500,
       },
     ],
     discountType: 'amount',

@@ -90,15 +90,15 @@ export const EMPTY_SELLER_INFO: SellerInfo = {
 };
 
 export const DEFAULT_SELLER_INFO: SellerInfo = {
-  arabicName: 'شركة إنفو كور للتقنية الذكية',
-  englishName: 'InvoCore Smart Technology Co.',
+  arabicName: 'شركة نوفاكور للتقنية الذكية',
+  englishName: 'NovaCore Technologies Ltd.',
   legalType: 'شركة ذات مسؤولية محدودة',
-  crNumber: '1010000000',
-  taxNumber: '300000000000003',
+  crNumber: '1010892451',
+  taxNumber: '310987654300003',
   address: 'المملكة العربية السعودية - الرياض',
-  phone: '0500000000',
-  email: 'info@invocore.sa',
-  bankName: 'البنك الأهلي السعودي',
+  phone: '+966 50 000 0000',
+  email: 'contact@novacore.io',
+  bankName: 'البنك الأهلي السعودي (SNB)',
   iban: 'SA0000000000000000000000',
   primaryColor: '#0F172A',
   accentColor: '#D97706',
@@ -180,10 +180,11 @@ export const DEFAULT_SAVED_CLIENTS: SavedClient[] = [];
 export const DEFAULT_INITIAL_LINE_ITEMS: InvoiceLineItem[] = [
   {
     id: 'item-initial-1',
-    description: '',
-    unit: 'وحدة',
+    itemCode: 'SaaS-101',
+    description: 'Cloud Infrastructure & API Integration / تطوير وربط البنية السحابية',
+    unit: 'خدمة',
     qty: 1,
-    unitPrice: 0,
+    unitPrice: 1500,
   },
 ];
 

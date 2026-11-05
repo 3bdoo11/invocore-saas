@@ -133,7 +133,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   type="text"
                   value={seller.arabicName}
                   onChange={(e) => onUpdateSeller({ ...seller, arabicName: e.target.value })}
-                  placeholder="مثال: شركة التطوير الحديث للمقاولات"
+                  placeholder="مثال: شركة نوفاكور للتقنية الذكية"
                   className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
@@ -147,7 +147,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   dir="ltr"
                   value={seller.englishName}
                   onChange={(e) => onUpdateSeller({ ...seller, englishName: e.target.value })}
-                  placeholder="e.g. Modern Development Contracting Co."
+                  placeholder="e.g. NovaCore Technologies Ltd."
                   className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
                 />
               </div>
@@ -230,7 +230,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   dir="ltr"
                   value={seller.email || ''}
                   onChange={(e) => onUpdateSeller({ ...seller, email: e.target.value })}
-                  placeholder="info@company.com"
+                  placeholder="contact@novacore.io"
                   className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-amber-500"
                 />
               </div>

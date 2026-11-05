@@ -170,7 +170,7 @@ export const LineItemRow: React.FC<LineItemRowProps> = ({
               setIsDropdownOpen(true);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="مثال: توريد خرسانة جاهزة / حديد تسليح..."
+            placeholder="مثال: تطوير وربط البنية السحابية / Cloud Infrastructure & API..."
             className="w-full rounded-lg border border-slate-300 bg-white pr-3 pl-9 py-2 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none transition-all"
           />
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />

@@ -14,6 +14,8 @@ export interface CatalogItem {
   unit?: string;
   defaultQuantity?: number;
   unitPrice: number;
+  itemCode?: string;
+  isTaxable?: boolean;
 }
 
 export interface InvoiceLineItem {

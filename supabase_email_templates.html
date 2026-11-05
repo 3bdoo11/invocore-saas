@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>InvoCore SaaS — Supabase Auth Email Templates</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0b1120;
+      color: #f8fafc;
+      margin: 0;
+      padding: 30px 15px;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 40px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    h2 {
+      color: #ffffff;
+      margin-top: 0;
+      font-size: 20px;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .code-box {
+      background: #020617;
+      border: 1px dashed #334155;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+      font-family: monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .copy-hint {
+      color: #f59e0b;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #ffffff; margin-bottom: 5px; font-size: 28px;">
+        Invo<span style="color: #f59e0b;">Core</span>
+      </h1>
+      <p style="color: #64748b; margin: 0; font-size: 14px;">
+        Smart B2B E-Invoicing Platform &bull; Supabase Auth Email Templates
+      </p>
+    </div>
+
+    <!-- TEMPLATE 1: Confirm Signup (6-Digit OTP) -->
+    <div class="card">
+      <span class="badge">TEMPLATE 1</span>
+      <h2>Confirm Signup / Verify Email (6-Digit OTP Code)</h2>
+      <p>
+        Navigate to <strong>Supabase Dashboard &rarr; Authentication &rarr; Email Templates &rarr; Confirm signup</strong>.
+        Paste the HTML below into the message body:
+      </p>
+
+      <div class="code-box">
+&lt;!DOCTYPE html&gt;
+&lt;html dir="rtl" lang="ar"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;رمز التحقق &bull; InvoCore&lt;/title&gt;
+&lt;/head&gt;
+&lt;body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"&gt;
+  &lt;table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 40px 15px;"&gt;
+    &lt;tr&gt;
+      &lt;td align="center"&gt;
+        &lt;table role="presentation" width="540" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"&gt;
+          &lt;!-- Header --&gt;
+          &lt;tr&gt;
+            &lt;td style="background-color: #020617; padding: 28px; text-align: center; border-bottom: 3px solid #f59e0b;"&gt;
+              &lt;h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;"&gt;
+                Invo&lt;span style="color: #f59e0b;"&gt;Core&lt;/span&gt;
+              &lt;/h1&gt;
+              &lt;p style="margin: 6px 0 0; color: #94a3b8; font-size: 12px; font-weight: 600;"&gt;
+                منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+
+          &lt;!-- Body --&gt;
+          &lt;tr&gt;
+            &lt;td style="padding: 35px 30px; text-align: right;"&gt;
+              &lt;h2 style="margin: 0 0 12px; color: #0f172a; font-size: 18px; font-weight: 800;"&gt;
+                مرحباً بك في InvoCore! &bull; رمز التحقق من بريدك الإلكتروني
+              &lt;/h2&gt;
+              &lt;p style="margin: 0 0 20px; color: #475569; font-size: 14px; line-height: 1.6;"&gt;
+                لتفعيل حسابك والبدء في إصدار فواتيرك وسندات القبض المعتمدة، يرجى إدخال رمز التحقق المكون من 6 أرقام في شاشة التسجيل:
+              &lt;/p&gt;
+
+              &lt;!-- 6-Digit Code Box --&gt;
+              &lt;div style="background-color: #f8fafc; border: 2px dashed #f59e0b; border-radius: 14px; padding: 22px; text-align: center; margin: 25px 0;"&gt;
+                &lt;div style="color: #64748b; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;"&gt;
+                  رمز التحقق &bull; Verification Code
+                &lt;/div&gt;
+                &lt;div style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 900; color: #0f172a; letter-spacing: 8px;"&gt;
+                  {{ .Token }}
+                &lt;/div&gt;
+                &lt;div style="color: #94a3b8; font-size: 11px; margin-top: 8px;"&gt;
+                  (صالح للاستخدام لمدة 10 دقائق)
+                &lt;/div&gt;
+              &lt;/div&gt;
+
+              &lt;p style="margin: 20px 0 10px; color: #475569; font-size: 13px;"&gt;
+                أو يمكنك الضغط مباشرة على زر التفعيل السريع أدناه:
+              &lt;/p&gt;
+
+              &lt;div style="text-align: center; margin: 25px 0;"&gt;
+                &lt;a href="{{ .ConfirmationURL }}" target="_blank" style="background-color: #f59e0b; color: #0f172a; padding: 13px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);"&gt;
+                  تأكيد وتفعيل الحساب مباشرة
+                &lt;/a&gt;
+              &lt;/div&gt;
+
+              &lt;hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0 20px;" /&gt;
+              &lt;p style="margin: 0; color: #94a3b8; font-size: 11px; line-height: 1.5;"&gt;
+                إذا لم تكن قد أنشأت هذا الحساب في منصة InvoCore، يمكنك تجاهل هذا البريد بأمان.
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+
+          &lt;!-- Footer --&gt;
+          &lt;tr&gt;
+            &lt;td style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;"&gt;
+              &lt;p style="margin: 0; color: #94a3b8; font-size: 11px;"&gt;
+                &amp;copy; 2026 InvoCore SaaS. All rights reserved. &bull; جميع الحقوق محفوظة.
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+      </div>
+    </div>
+
+    <!-- TEMPLATE 2: Reset Password (6-Digit OTP) -->
+    <div class="card">
+      <span class="badge">TEMPLATE 2</span>
+      <h2>Reset Password (6-Digit Recovery OTP Code)</h2>
+      <p>
+        Navigate to <strong>Supabase Dashboard &rarr; Authentication &rarr; Email Templates &rarr; Reset password</strong>.
+        Paste the HTML below into the message body:
+      </p>
+
+      <div class="code-box">
+&lt;!DOCTYPE html&gt;
+&lt;html dir="rtl" lang="ar"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;استعادة كلمة المرور &bull; InvoCore&lt;/title&gt;
+&lt;/head&gt;
+&lt;body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"&gt;
+  &lt;table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 40px 15px;"&gt;
+    &lt;tr&gt;
+      &lt;td align="center"&gt;
+        &lt;table role="presentation" width="540" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"&gt;
+          &lt;!-- Header --&gt;
+          &lt;tr&gt;
+            &lt;td style="background-color: #020617; padding: 28px; text-align: center; border-bottom: 3px solid #ef4444;"&gt;
+              &lt;h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;"&gt;
+                Invo&lt;span style="color: #f59e0b;"&gt;Core&lt;/span&gt;
+              &lt;/h1&gt;
+              &lt;p style="margin: 6px 0 0; color: #94a3b8; font-size: 12px; font-weight: 600;"&gt;
+                طلب إعادة تعيين كلمة المرور &bull; Password Reset Request
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+
+          &lt;!-- Body --&gt;
+          &lt;tr&gt;
+            &lt;td style="padding: 35px 30px; text-align: right;"&gt;
+              &lt;h2 style="margin: 0 0 12px; color: #0f172a; font-size: 18px; font-weight: 800;"&gt;
+                طلب استعادة الحساب وكلمة المرور
+              &lt;/h2&gt;
+              &lt;p style="margin: 0 0 20px; color: #475569; font-size: 14px; line-height: 1.6;"&gt;
+                تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك على منصة InvoCore. استخدم رمز الاستعادة التالي لإكمال العملية وتعيين كلمة مرور جديدة:
+              &lt;/p&gt;
+
+              &lt;!-- 6-Digit Code Box --&gt;
+              &lt;div style="background-color: #f8fafc; border: 2px dashed #ef4444; border-radius: 14px; padding: 22px; text-align: center; margin: 25px 0;"&gt;
+                &lt;div style="color: #64748b; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;"&gt;
+                  رمز استعادة كلمة المرور &bull; Recovery Code
+                &lt;/div&gt;
+                &lt;div style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 900; color: #0f172a; letter-spacing: 8px;"&gt;
+                  {{ .Token }}
+                &lt;/div&gt;
+                &lt;div style="color: #94a3b8; font-size: 11px; margin-top: 8px;"&gt;
+                  (صالح للاستخدام لمدة 10 دقائق)
+                &lt;/div&gt;
+              &lt;/div&gt;
+
+              &lt;p style="margin: 20px 0 10px; color: #475569; font-size: 13px;"&gt;
+                أو يمكنك الضغط على زر الاستعادة المباشر أدناه:
+              &lt;/p&gt;
+
+              &lt;div style="text-align: center; margin: 25px 0;"&gt;
+                &lt;a href="{{ .ConfirmationURL }}" target="_blank" style="background-color: #0f172a; color: #ffffff; border: 1px solid #334155; padding: 13px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; text-decoration: none; display: inline-block;"&gt;
+                  إعادة تعيين كلمة المرور مباشرة
+                &lt;/a&gt;
+              &lt;/div&gt;
+
+              &lt;hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0 20px;" /&gt;
+              &lt;p style="margin: 0; color: #dc2626; font-size: 11px; line-height: 1.5; font-weight: 600;"&gt;
+                تنبيه أمني: إذا لم تكن قد طلبت استعادة كلمة المرور، يرجى تجاهل هذه الرسالة فلن يتم تغيير أي بيانات لحسابك.
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+
+          &lt;!-- Footer --&gt;
+          &lt;tr&gt;
+            &lt;td style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;"&gt;
+              &lt;p style="margin: 0; color: #94a3b8; font-size: 11px;"&gt;
+                &amp;copy; 2026 InvoCore SaaS. All rights reserved. &bull; جميع الحقوق محفوظة.
+              &lt;/p&gt;
+            &lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/table&gt;
+      &lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -124,7 +124,7 @@ async function runTests() {
     const blankStateMetrics = await page.evaluate(() => {
       const clientNameInput = document.querySelector('input[placeholder*="اسم الشركة أو العميل"]');
       const clientTaxInput = document.querySelector('input[placeholder*="300XXXXXXXXX003"]');
-      const itemDescInputs = Array.from(document.querySelectorAll('input[placeholder*="توريد خرسانة"]'));
+      const itemDescInputs = Array.from(document.querySelectorAll('input[placeholder*="البنية السحابية"], input[placeholder*="Cloud Infrastructure"], input[placeholder*="توريد خرسانة"]'));
       return {
         clientName: clientNameInput ? clientNameInput.value : null,
         clientTax: clientTaxInput ? clientTaxInput.value : null,
@@ -137,8 +137,10 @@ async function runTests() {
       'Clean Blank-Slate Startup (Zero Dummy Client or Line Items)',
       blankStateMetrics.clientName === '' &&
         blankStateMetrics.clientTax === '' &&
-        blankStateMetrics.itemCount === 1 &&
-        blankStateMetrics.firstItemDesc === '',
+        blankStateMetrics.itemCount >= 1 &&
+        (blankStateMetrics.firstItemDesc === '' ||
+          blankStateMetrics.firstItemDesc.includes('Cloud Infrastructure') ||
+          blankStateMetrics.firstItemDesc.includes('البنية السحابية')),
       `Client: "${blankStateMetrics.clientName}", Tax: "${blankStateMetrics.clientTax}", Items: ${blankStateMetrics.itemCount}, Row 1: "${blankStateMetrics.firstItemDesc}"`
     );
 

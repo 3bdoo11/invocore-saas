@@ -19,6 +19,7 @@ import {
   FilePlus2,
   FileSpreadsheet,
   FileText,
+  Globe,
   History,
   Layers,
   LogIn,
@@ -128,6 +129,16 @@ import {
 } from './lib/supabase';
 import { AuthModal } from './components/AuthModal';
 import { TrialLimitModal } from './components/TrialLimitModal';
+import { getTranslation, Language } from './utils/i18n';
+import {
+  loadCatalogItemsFromCloud,
+  loadDocumentsFromCloud,
+  loadTenantSettingsFromCloud,
+  subscribeToTenantSync,
+  syncCatalogItemToCloud,
+  syncDocumentToCloud,
+  syncTenantSettingsToCloud,
+} from './lib/supabaseSync';
 
 type AdminTab = 'editor' | 'catalog' | 'history' | 'settings';
 type MobilePane = 'controls' | 'preview';
@@ -197,6 +208,30 @@ export function App() {
   // Document View / Print Mode ('invoice' | 'receipt' | 'both')
   const [docPrintView, setDocPrintView] =
     useState<DocumentPrintView>('invoice');
+
+  // --- 100% Arabic & English Bidirectional Localization Engine ---
+  const [lang, setLang] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('invocore_lang') as Language;
+      if (saved === 'ar' || saved === 'en') return saved;
+    } catch {}
+    return 'ar';
+  });
+
+  const t = useMemo(() => getTranslation(lang), [lang]);
+
+  const toggleLanguage = () => {
+    const nextLang: Language = lang === 'ar' ? 'en' : 'ar';
+    setLang(nextLang);
+    try {
+      localStorage.setItem('invocore_lang', nextLang);
+    } catch {}
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }, [lang]);
 
   // --- Supabase Authentication, Profile & Usage Tracking ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -306,6 +341,73 @@ export function App() {
       showToast(`أهلاً بك ${profile.full_name || profile.email}! تم تسجيل الدخول بنجاح`);
     }
   };
+
+  // --- Multi-Device Cloud Sync Engine Hook ---
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    let isMounted = true;
+
+    // 1. Initial Load from Supabase Cloud
+    async function loadCloudData() {
+      try {
+        const [cloudSettings, cloudCatalog, cloudDocs] = await Promise.all([
+          loadTenantSettingsFromCloud(currentUser!.id),
+          loadCatalogItemsFromCloud(currentUser!.id),
+          loadDocumentsFromCloud(currentUser!.id),
+        ]);
+
+        if (!isMounted) return;
+
+        if (cloudSettings) {
+          setSeller((prev) => ({ ...prev, ...cloudSettings }));
+          saveSellerToStorage(cloudSettings);
+        }
+        if (cloudCatalog && cloudCatalog.length > 0) {
+          setCatalog(cloudCatalog);
+          saveCatalogToStorage(cloudCatalog);
+        }
+        if (cloudDocs && cloudDocs.length > 0) {
+          setSavedInvoices(cloudDocs);
+          saveInvoicesToStorage(cloudDocs);
+        }
+      } catch (err) {
+        console.warn('Initial cloud sync load failed:', err);
+      }
+    }
+
+    loadCloudData();
+
+    // 2. Real-Time Channel Subscription
+    const channel = subscribeToTenantSync(currentUser.id, {
+      onSettingsChange: (newSeller) => {
+        if (!isMounted) return;
+        setSeller(newSeller);
+        saveSellerToStorage(newSeller);
+      },
+      onCatalogChange: async () => {
+        if (!isMounted) return;
+        const freshCatalog = await loadCatalogItemsFromCloud(currentUser!.id);
+        if (freshCatalog.length > 0) {
+          setCatalog(freshCatalog);
+          saveCatalogToStorage(freshCatalog);
+        }
+      },
+      onDocumentsChange: async () => {
+        if (!isMounted) return;
+        const freshDocs = await loadDocumentsFromCloud(currentUser!.id);
+        if (freshDocs.length > 0) {
+          setSavedInvoices(freshDocs);
+          saveInvoicesToStorage(freshDocs);
+        }
+      },
+    });
+
+    return () => {
+      isMounted = false;
+      channel?.unsubscribe();
+    };
+  }, [currentUser?.id]);
 
   // Expose test helper methods on window for automated QA verification
   useEffect(() => {
@@ -427,7 +529,12 @@ export function App() {
 
   useEffect(() => {
     saveSellerToStorage(seller);
-  }, [seller]);
+    if (currentUser?.id) {
+      syncTenantSettingsToCloud(currentUser.id, seller).catch((err) =>
+        console.warn('Auto cloud sync seller failed:', err)
+      );
+    }
+  }, [seller, currentUser?.id]);
 
   // Keep document.title set to Official Platform Title; only switch temporarily during print for iOS PDF filename
   useEffect(() => {
@@ -959,6 +1066,20 @@ export function App() {
         ...prev,
       ];
     });
+
+    if (currentUser?.id) {
+      syncCatalogItemToCloud(
+        currentUser.id,
+        {
+          id: generateId('cat'),
+          name: cleanName,
+          unitPrice,
+          unit: unit || 'وحدة',
+          isTaxable: true,
+        },
+        currentPlanTier === 'pro'
+      ).catch((err) => console.warn('Cloud catalog sync failed:', err));
+    }
   };
 
   const handleUpdateCatalogItem = (
@@ -1177,6 +1298,16 @@ export function App() {
     saveInvoicesToStorage(updatedList);
     setSavedInvoices(updatedList);
 
+    if (currentUser?.id) {
+      syncDocumentToCloud(
+        currentUser.id,
+        'invoice',
+        issuedInvoice.invoiceNumber,
+        issuedInvoice,
+        currentPlanTier === 'pro'
+      ).catch((err) => console.warn('Cloud doc sync failed:', err));
+    }
+
     return { savedInvoice: issuedInvoice, updatedList, isUpdate };
   };
 
@@ -1248,7 +1379,7 @@ export function App() {
     <>
       {/* Main Admin Application Shell (Hidden when Printing) */}
       <div
-        dir="rtl"
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}
         className="no-print min-h-screen w-full max-w-[100vw] overflow-x-hidden lg:h-screen lg:overflow-hidden flex flex-col bg-slate-100 text-slate-900"
       >
         {/* Row 0: Commercial License & User Status Bar */}
@@ -1258,7 +1389,7 @@ export function App() {
             <div className="flex items-center gap-1.5 font-bold text-slate-200">
               <UserIcon className="w-3.5 h-3.5 text-amber-400" />
               <span>
-                {currentUser?.email || 'زائر تجريبي (⚡ Guest Preview)'}
+                {currentUser?.email || (lang === 'ar' ? 'زائر تجريبي (⚡ Guest Preview)' : 'Guest Preview (⚡ Demo)')}
               </span>
             </div>
 
@@ -1267,13 +1398,15 @@ export function App() {
             {currentPlanTier === 'pro' ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                 <Crown className="w-3.5 h-3.5 text-emerald-400" />
-                <span>حساب مرخص (PRO Licensed Account)</span>
+                <span>{lang === 'ar' ? 'حساب مرخص (PRO Licensed Account)' : 'PRO Licensed Account'}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-500/15 text-amber-300 border border-amber-400/30">
                 <Sparkles className="w-3 h-3 text-amber-400" />
                 <span>
-                  رصيد الفواتير التجريبية: {Math.max(0, maxTrialInvoices - invoicesGenerated)} / {maxTrialInvoices} متبقية (Free Trial)
+                  {lang === 'ar'
+                    ? `رصيد الفواتير التجريبية: ${Math.max(0, maxTrialInvoices - invoicesGenerated)} / ${maxTrialInvoices} متبقية (Free Trial)`
+                    : `Trial Balance: ${Math.max(0, maxTrialInvoices - invoicesGenerated)} / ${maxTrialInvoices} remaining (Free Trial)`}
                 </span>
               </span>
             )}
@@ -1281,6 +1414,17 @@ export function App() {
 
           {/* Action Pod */}
           <div className="flex items-center gap-2">
+            {/* Global Language Switcher */}
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              title={lang === 'ar' ? 'Switch interface to English' : 'التحويل إلى اللغة العربية'}
+            >
+              <Globe className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t.langSwitchBtn}</span>
+            </button>
+
             {currentPlanTier !== 'pro' && (
               <button
                 type="button"
@@ -1288,7 +1432,7 @@ export function App() {
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-sm transition-all cursor-pointer"
               >
                 <Crown className="w-3.5 h-3.5 fill-slate-950" />
-                <span>ترقية إلى PRO</span>
+                <span>{t.upgradeToPro}</span>
               </button>
             )}
 
@@ -1296,17 +1440,17 @@ export function App() {
               type="button"
               onClick={handleAuthAction}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
-              title={currentUser ? 'تسجيل الخروج من الحساب' : 'تسجيل الدخول / إنشاء حساب'}
+              title={currentUser ? (lang === 'ar' ? 'تسجيل الخروج من الحساب' : 'Sign Out') : (lang === 'ar' ? 'تسجيل الدخول / إنشاء حساب' : 'Sign In / Register')}
             >
               {currentUser ? (
                 <>
                   <LogOut className="w-3.5 h-3.5 text-amber-400" />
-                  <span>تسجيل الخروج</span>
+                  <span>{t.signOut}</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-3.5 h-3.5 text-amber-400" />
-                  <span>تسجيل الدخول / إنشاء حساب</span>
+                  <span>{t.signInOrCreate}</span>
                 </>
               )}
             </button>
@@ -1332,9 +1476,9 @@ export function App() {
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-300 font-medium truncate max-w-[230px] sm:max-w-[300px] mt-0.5">
-                    {seller.arabicName || 'منصة InvoCore الذكية'} • ضريبي:{' '}
+                    {(lang === 'ar' ? seller.arabicName : (seller.englishName || seller.arabicName)) || 'InvoCore Platform'} • {lang === 'ar' ? 'ضريبي:' : 'VAT:'}{' '}
                     <span className="num-tabular text-amber-300">
-                      {seller.taxNumber || 'غير محدد'}
+                      {seller.taxNumber || (lang === 'ar' ? 'غير محدد' : 'N/A')}
                     </span>
                   </p>
                 </div>
@@ -1348,14 +1492,14 @@ export function App() {
                     style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
                   />
                   <span className="text-xs font-black text-amber-300 truncate max-w-[150px]">
-                    {seller.arabicName || 'منصة InvoCore'}
+                    {(lang === 'ar' ? seller.arabicName : (seller.englishName || seller.arabicName)) || 'InvoCore'}
                   </span>
                   <span className="text-[9.5px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-bold">
                     {seller.templateStyle === 'classic'
-                      ? 'كلاسيكي'
+                      ? (lang === 'ar' ? 'كلاسيكي' : 'Classic')
                       : seller.templateStyle === 'minimalist'
-                        ? 'مبسط'
-                        : 'عصري'}
+                        ? (lang === 'ar' ? 'مبسط' : 'Minimal')
+                        : (lang === 'ar' ? 'عصري' : 'Modern')}
                   </span>
                 </div>
 
@@ -1363,10 +1507,10 @@ export function App() {
                   type="button"
                   onClick={() => setActiveTab('settings')}
                   className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                  title="تخصيص بيانات المنشأة والشعار والألوان"
+                  title={lang === 'ar' ? 'تخصيص بيانات المنشأة والشعار والألوان' : 'Customize company branding & logo'}
                 >
                   <Building2 className="w-3.5 h-3.5" />
-                  <span>إعدادات المنشأة</span>
+                  <span>{t.tabSettings}</span>
                 </button>
               </div>
             </div>
@@ -1391,7 +1535,7 @@ export function App() {
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>الفاتورة الضريبية</span>
+                  <span>{lang === 'ar' ? 'الفاتورة الضريبية' : 'Tax Invoice'}</span>
                 </button>
 
                 {(isDeferredInvoice || docPrintView !== 'invoice') && (
@@ -1404,10 +1548,10 @@ export function App() {
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }`}
-                      title="عرض وإصدار سند قبض (للفواتير الآجلة)"
+                      title={lang === 'ar' ? 'عرض وإصدار سند قبض (للفواتير الآجلة)' : 'View & issue receipt voucher'}
                     >
                       <Receipt className="w-3.5 h-3.5" />
-                      <span>سند قبض</span>
+                      <span>{t.tabReceiptVoucher}</span>
                     </button>
 
                     <button
@@ -1418,10 +1562,10 @@ export function App() {
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }`}
-                      title="عرض وطباعة الفاتورة الضريبية يليها سند القبض في صفحة مستقلة"
+                      title={lang === 'ar' ? 'عرض وطباعة الفاتورة الضريبية يليها سند القبض' : 'Print Invoice & Receipt voucher together'}
                     >
                       <FileCheck2 className="w-3.5 h-3.5" />
-                      <span className="hidden md:inline">الفاتورة + السند</span>
+                      <span className="hidden md:inline">{lang === 'ar' ? 'الفاتورة + السند' : 'Invoice + Receipt'}</span>
                     </button>
                   </>
                 )}
@@ -1439,7 +1583,7 @@ export function App() {
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  تقسيم الشاشة
+                  {lang === 'ar' ? 'تقسيم الشاشة' : 'Split'}
                 </button>
                 <button
                   type="button"
@@ -1450,7 +1594,7 @@ export function App() {
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  تركيز الإدخال
+                  {lang === 'ar' ? 'تركيز الإدخال' : 'Input'}
                 </button>
                 <button
                   type="button"
@@ -1461,7 +1605,7 @@ export function App() {
                       : 'text-slate-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  المعاينة فقط
+                  {lang === 'ar' ? 'المعاينة فقط' : 'Preview'}
                 </button>
               </div>
             </div>
@@ -1474,17 +1618,17 @@ export function App() {
                 className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-extrabold bg-[#B45309] hover:bg-[#D97706] text-white px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
-                <span>طباعة / PDF</span>
+                <span>{lang === 'ar' ? 'طباعة / PDF' : 'Print / PDF'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleWhatsAppShare}
                 className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-extrabold bg-[#25D366] hover:bg-[#1DA851] text-slate-950 px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
-                title="مشاركة رابط وتفاصيل الفاتورة مباشرة عبر واتساب"
+                title={lang === 'ar' ? 'مشاركة رابط وتفاصيل الفاتورة مباشرة عبر واتساب' : 'Share invoice details directly via WhatsApp'}
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>مشاركة واتساب</span>
+                <span>{lang === 'ar' ? 'مشاركة واتساب' : 'WhatsApp'}</span>
               </button>
 
               <a
@@ -1492,10 +1636,10 @@ export function App() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 px-3 py-2 rounded-xl transition-colors cursor-pointer"
-                title="معاينة صفحة العميل العامة كما تظهر عند مسح الرابط بالكاميرا"
+                title={lang === 'ar' ? 'معاينة صفحة العميل العامة كما تظهر عند مسح الرابط بالكاميرا' : 'Preview public client page as opened via QR scan'}
               >
                 <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                <span>صفحة العميل</span>
+                <span>{lang === 'ar' ? 'صفحة العميل' : 'Client View'}</span>
               </a>
 
               <button
@@ -1504,7 +1648,7 @@ export function App() {
                 className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1 text-xs font-extrabold bg-transparent hover:bg-amber-500/15 text-amber-300 border border-amber-400/50 px-3 py-2 rounded-xl transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>فاتورة جديدة</span>
+                <span>{lang === 'ar' ? 'فاتورة جديدة' : '+ New Invoice'}</span>
               </button>
             </div>
           </div>
@@ -1522,7 +1666,7 @@ export function App() {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>لوحة الإدخال والتحكم</span>
+            <span>{lang === 'ar' ? 'لوحة الإدخال والتحكم' : 'Editor & Controls'}</span>
           </button>
           <button
             type="button"
@@ -1535,10 +1679,9 @@ export function App() {
           >
             <Eye className="w-4 h-4" />
             <span>
-              معاينة{' '}
-              {docPrintView === 'receipt'
-                ? 'سند القبض'
-                : `الفاتورة (${totalPages})`}
+              {lang === 'ar'
+                ? `معاينة ${docPrintView === 'receipt' ? 'سند القبض' : `الفاتورة (${totalPages})`}`
+                : `Preview ${docPrintView === 'receipt' ? 'Receipt' : `Invoice (${totalPages})`}`}
             </span>
           </button>
         </div>
@@ -1653,7 +1796,7 @@ export function App() {
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">الفاتورة</span>
+                  <span className="truncate">{lang === 'ar' ? 'الفاتورة' : 'Invoice'}</span>
                 </button>
 
                 <button
@@ -1666,7 +1809,7 @@ export function App() {
                   }`}
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">الأصناف</span>
+                  <span className="truncate">{lang === 'ar' ? 'الأصناف' : 'Catalog'}</span>
                   <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
                     {catalog.length}
                   </span>
@@ -1682,7 +1825,7 @@ export function App() {
                   }`}
                 >
                   <History className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">السجل</span>
+                  <span className="truncate">{lang === 'ar' ? 'السجل' : 'History'}</span>
                   <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
                     {savedInvoices.length}
                   </span>
@@ -1698,7 +1841,7 @@ export function App() {
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="truncate">إعدادات المنشأة</span>
+                  <span className="truncate">{lang === 'ar' ? 'إعدادات المنشأة' : 'Settings'}</span>
                 </button>
               </div>
             </div>
@@ -3267,6 +3410,7 @@ export function App() {
                       viewMode={previewViewMode}
                       renderAllPages={false}
                       isWatermarked={isWatermarked}
+                      lang={lang}
                     />
                   )}
 
@@ -3276,6 +3420,7 @@ export function App() {
                       invoice={invoice}
                       seller={seller}
                       isWatermarked={isWatermarked}
+                      lang={lang}
                     />
                   )}
                 </div>
@@ -3398,6 +3543,7 @@ export function App() {
             seller={seller}
             renderAllPages={true}
             isWatermarked={isWatermarked}
+            lang={lang}
           />
         )}
         {(effectiveDocPrintView === 'receipt' ||
@@ -3406,6 +3552,7 @@ export function App() {
             invoice={invoice}
             seller={seller}
             isWatermarked={isWatermarked}
+            lang={lang}
           />
         )}
       </div>

@@ -198,3 +198,141 @@ grant select on public.profiles to anon;
 grant insert on public.activity_logs to anon, authenticated;
 grant select on public.activity_logs to authenticated;
 grant execute on function public.increment_invoice_count() to authenticated;
+
+-- ==============================================================================
+-- 7. Real-Time Cloud Sync: Tenant Settings / Corporate Branding
+-- ==============================================================================
+create table if not exists public.tenant_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  seller_info jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_tenant_settings_user_id on public.tenant_settings(user_id);
+alter table public.tenant_settings enable row level security;
+
+create policy "Users can read own tenant settings"
+  on public.tenant_settings for select
+  using (auth.uid() = user_id);
+
+create policy "Users can upsert own tenant settings"
+  on public.tenant_settings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own tenant settings"
+  on public.tenant_settings for update
+  using (auth.uid() = user_id);
+
+-- ==============================================================================
+-- 8. Real-Time Cloud Sync: Catalog Items with Free Trial Quota (50 items max)
+-- ==============================================================================
+create table if not exists public.catalog_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_code text,
+  description text not null,
+  unit text not null default 'وحدة',
+  unit_price numeric not null default 0,
+  is_taxable boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_catalog_items_user_id on public.catalog_items(user_id);
+alter table public.catalog_items enable row level security;
+
+create policy "Users can view own catalog items"
+  on public.catalog_items for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own catalog items"
+  on public.catalog_items for insert
+  with check (
+    auth.uid() = user_id
+    and (
+      (select plan_tier from public.profiles where id = auth.uid()) = 'pro'
+      or (select count(*) from public.catalog_items where user_id = auth.uid()) < 50
+    )
+  );
+
+create policy "Users can update own catalog items"
+  on public.catalog_items for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own catalog items"
+  on public.catalog_items for delete
+  using (auth.uid() = user_id);
+
+-- ==============================================================================
+-- 9. Real-Time Cloud Sync: Saved Invoices & Vouchers with Free Trial Quota (3 max)
+-- ==============================================================================
+create table if not exists public.saved_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  doc_type text not null check (doc_type in ('invoice', 'receipt')),
+  doc_number text not null,
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_saved_documents_user_id on public.saved_documents(user_id);
+create index if not exists idx_saved_documents_type on public.saved_documents(doc_type);
+alter table public.saved_documents enable row level security;
+
+create policy "Users can view own saved documents"
+  on public.saved_documents for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert own saved documents"
+  on public.saved_documents for insert
+  with check (
+    auth.uid() = user_id
+    and (
+      (select plan_tier from public.profiles where id = auth.uid()) = 'pro'
+      or (select count(*) from public.saved_documents where user_id = auth.uid()) < (
+        select coalesce(max_trial_invoices, 3) from public.profiles where id = auth.uid()
+      )
+    )
+  );
+
+create policy "Users can update own saved documents"
+  on public.saved_documents for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete own saved documents"
+  on public.saved_documents for delete
+  using (auth.uid() = user_id);
+
+-- ==============================================================================
+-- 10. Enable Supabase Realtime Publication on Cloud Sync Tables
+-- ==============================================================================
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'tenant_settings'
+  ) then
+    alter publication supabase_realtime add table public.tenant_settings;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'catalog_items'
+  ) then
+    alter publication supabase_realtime add table public.catalog_items;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'saved_documents'
+  ) then
+    alter publication supabase_realtime add table public.saved_documents;
+  end if;
+end $$;
+
+-- 11. Grant permissions to authenticated clients
+grant select, insert, update on public.tenant_settings to authenticated;
+grant select, insert, update, delete on public.catalog_items to authenticated;
+grant select, insert, update, delete on public.saved_documents to authenticated;

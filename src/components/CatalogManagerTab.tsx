@@ -347,7 +347,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="اسم الصنف أو البيان (مثال: توريد خرسانة جاهزة / حديد تسليح...)"
+            placeholder="اسم الصنف أو البيان (مثال: تطوير وربط البنية السحابية / Cloud Infrastructure & API...)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none"
           />
 
