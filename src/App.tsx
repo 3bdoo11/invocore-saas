@@ -55,7 +55,6 @@ import {
   InvoiceData,
   InvoiceLineItem,
   PaymentMethod,
-  QrEncodingMode,
   ReceiptVoucherData,
   SavedClient,
   SellerInfo,
@@ -131,7 +130,6 @@ import { AuthModal } from './components/AuthModal';
 import { TrialLimitModal } from './components/TrialLimitModal';
 import { InvoCoreLogo } from './components/InvoCoreLogo';
 import {
-  JURISDICTIONS,
   getMarketConfig,
   TaxJurisdiction,
 } from './constants/jurisdictions';
@@ -642,6 +640,20 @@ export function App() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleBrandLogoClick = () => {
+    setIsAuthModalOpen(false);
+    setIsTrialLimitModalOpen(false);
+    setIsSellerModalOpen(false);
+    setShareModal(null);
+    setShowZatcaInspector(false);
+    setIsOnboardingOpen(false);
+    setActiveTab('editor');
+    setDocPrintView('invoice');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Active Jurisdiction and Market Config
@@ -1403,22 +1415,22 @@ export function App() {
           {/* User Profile & Plan Badge */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5 font-bold text-slate-200">
-              <UserIcon className="w-3.5 h-3.5 text-amber-400" />
+              <UserIcon className="w-3.5 h-3.5 text-teal-400" />
               <span>
-                {currentUser?.email || (lang === 'ar' ? 'زائر تجريبي (⚡ Guest Preview)' : 'Guest Preview (⚡ Demo)')}
+                {currentUser?.email || (lang === 'ar' ? 'زائر تجريبي (معاينة سريعة)' : 'Guest Preview')}
               </span>
             </div>
 
             <span className="text-slate-700 hidden sm:inline">•</span>
 
             {currentPlanTier === 'pro' ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
                 <Crown className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{lang === 'ar' ? 'حساب مرخص (PRO Licensed Account)' : 'PRO Licensed Account'}</span>
+                <span>{lang === 'ar' ? 'حساب مرخص (PRO Licensed)' : 'PRO Licensed'}</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-amber-500/15 text-amber-300 border border-amber-400/30">
-                <Sparkles className="w-3 h-3 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                <Sparkles className="w-3 h-3 text-teal-400" />
                 <span>
                   {lang === 'ar'
                     ? `رصيد الفواتير التجريبية: ${Math.max(0, maxTrialInvoices - invoicesGenerated)} / ${maxTrialInvoices} متبقية (Free Trial)`
@@ -1430,53 +1442,29 @@ export function App() {
 
           {/* Action Pod */}
           <div className="flex items-center gap-2">
-            {/* Global Tax Market / Jurisdiction Selector */}
-            <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
-              {(Object.keys(JURISDICTIONS) as TaxJurisdiction[]).map((jCode) => {
-                const jConfig = JURISDICTIONS[jCode];
-                const isActive = currentJurisdiction === jCode;
-                return (
-                  <button
-                    key={jCode}
-                    type="button"
-                    onClick={() => {
-                      updateInvoice({
-                        jurisdiction: jCode,
-                        vatRate: jConfig.defaultVatRate,
-                        withholdingTaxRate: jCode === 'EGY' ? 1 : 0,
-                        isReverseCharge: false,
-                        qrMode: jCode === 'KSA' ? 'zatca' : 'web',
-                      });
-                      setSeller((prev) => ({ ...prev, jurisdiction: jCode }));
-                      saveSellerToStorage({ ...seller, jurisdiction: jCode });
-                      showToast(
-                        lang === 'ar'
-                          ? `تم ضبط السوق والامتثال: ${jConfig.countryNameAr} (${jConfig.currencySymbolAr})`
-                          : `Market switched: ${jConfig.countryNameEn} (${jConfig.currencySymbolEn})`
-                      );
-                    }}
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                      isActive
-                        ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-white/10'
-                    }`}
-                    title={lang === 'ar' ? jConfig.authorityNameAr : jConfig.authorityNameEn}
-                  >
-                    <span>{jConfig.flag}</span>
-                    <span className="hidden sm:inline">{jConfig.code}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Active Tax Jurisdiction Badge / Switcher (Opens Settings) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors cursor-pointer group"
+              title={lang === 'ar' ? 'تعديل سوق العمل والامتثال الضريبي في إعدادات المنشأة' : 'Edit tax jurisdiction in Company Settings'}
+            >
+              <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+              <span className="font-mono font-bold text-white">{marketConfig.code}</span>
+              <span className="text-slate-500 text-[10px]">•</span>
+              <span className="text-slate-300 text-[11px] font-medium">{marketConfig.currencyCode}</span>
+              <span className="text-slate-400 text-[11px]">{totals.vatRate}%</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-colors" />
+            </button>
 
             {/* Global Language Switcher */}
             <button
               type="button"
               onClick={toggleLanguage}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors cursor-pointer"
               title={lang === 'ar' ? 'Switch interface to English' : 'التحويل إلى اللغة العربية'}
             >
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
+              <Globe className="w-3.5 h-3.5 text-teal-400" />
               <span>{t.langSwitchBtn}</span>
             </button>
 
@@ -1484,9 +1472,9 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setIsTrialLimitModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white shadow-2xs transition-all cursor-pointer"
               >
-                <Crown className="w-3.5 h-3.5 fill-slate-950" />
+                <Crown className="w-3.5 h-3.5 fill-white" />
                 <span>{t.upgradeToPro}</span>
               </button>
             )}
@@ -1494,17 +1482,17 @@ export function App() {
             <button
               type="button"
               onClick={handleAuthAction}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors cursor-pointer"
               title={currentUser ? (lang === 'ar' ? 'تسجيل الخروج من الحساب' : 'Sign Out') : (lang === 'ar' ? 'تسجيل الدخول / إنشاء حساب' : 'Sign In / Register')}
             >
               {currentUser ? (
                 <>
-                  <LogOut className="w-3.5 h-3.5 text-amber-400" />
+                  <LogOut className="w-3.5 h-3.5 text-teal-400" />
                   <span>{t.signOut}</span>
                 </>
               ) : (
                 <>
-                  <LogIn className="w-3.5 h-3.5 text-amber-400" />
+                  <LogIn className="w-3.5 h-3.5 text-teal-400" />
                   <span>{t.signInOrCreate}</span>
                 </>
               )}
@@ -1512,42 +1500,50 @@ export function App() {
           </div>
         </div>
 
-        {/* Row 1: Main Navigation & Action Bar - Dark Navy #0F172A with 3 Clean Grouped Control Pods */}
-        <header className="bg-[#0F172A] text-white border-b-2 border-[#B45309] px-3 sm:px-5 py-3 lg:py-2.5 shrink-0 shadow-lg z-30 w-full max-w-full min-w-0">
+        {/* Row 1: Main Navigation & Action Bar - Dark Navy #0F172A with Clean Enterprise Styling */}
+        <header className="bg-[#0F172A] text-white border-b border-slate-800 px-3 sm:px-5 py-2.5 shrink-0 shadow-sm z-30 w-full max-w-full min-w-0">
           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between w-full min-w-0 gap-2.5">
-            {/* RIGHT POD: Platform Brand & Active Company Identity Pill */}
+            {/* RIGHT POD: Clickable Platform Brand & Active Company Identity Pill */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 w-full lg:w-auto min-w-0">
-              <div className="flex items-center gap-3 text-right min-w-0 w-full lg:w-auto">
-                <InvoCoreLogo size={36} variant="light" />
+              {/* Interactive InvoCore Logo Button */}
+              <button
+                type="button"
+                onClick={handleBrandLogoClick}
+                className="flex items-center gap-3 text-right min-w-0 w-full lg:w-auto cursor-pointer group text-left transition-opacity hover:opacity-95 focus:outline-none"
+                title={lang === 'ar' ? 'الرجوع إلى لوحة إنشاء الفاتورة الرئيسية' : 'Return to main Invoice Generator'}
+              >
+                <div className="transition-transform group-hover:scale-105">
+                  <InvoCoreLogo size={36} variant="light" />
+                </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h1 className="text-base sm:text-lg font-black tracking-tight text-white leading-none">
-                      Invo<span className="text-amber-400">Core</span>
+                    <h1 className="text-base sm:text-lg font-bold tracking-tight text-white leading-none">
+                      Invo<span className="text-teal-400">Core</span>
                     </h1>
-                    <span className="text-[10px] font-black bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30">
+                    <span className="text-[10px] font-medium bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
                       إنفو كور
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-300 font-medium truncate max-w-[230px] sm:max-w-[300px] mt-0.5">
+                  <p className="text-[10.5px] text-slate-400 font-medium truncate max-w-[230px] sm:max-w-[300px] mt-0.5">
                     {(lang === 'ar' ? seller.arabicName : (seller.englishName || seller.arabicName)) || 'InvoCore Platform'} • {lang === 'ar' ? 'ضريبي:' : 'VAT:'}{' '}
-                    <span className="num-tabular text-amber-300">
+                    <span className="num-tabular text-slate-300">
                       {seller.taxNumber || (lang === 'ar' ? 'غير محدد' : 'N/A')}
                     </span>
                   </p>
                 </div>
-              </div>
+              </button>
 
               {/* Active Company Pill & Settings Button */}
-              <div className="w-full lg:w-auto min-w-0 flex items-center justify-between gap-1.5 bg-slate-900/95 border border-amber-500/40 rounded-xl p-1 shadow-inner">
+              <div className="w-full lg:w-auto min-w-0 flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg p-1 shadow-inner">
                 <div className="flex items-center gap-1.5 px-2 py-1">
                   <div
-                    className="w-3 h-3 rounded-full border border-white/30 shrink-0"
+                    className="w-2.5 h-2.5 rounded-full border border-white/30 shrink-0"
                     style={{ backgroundColor: seller.primaryColor || '#0F172A' }}
                   />
-                  <span className="text-xs font-black text-amber-300 truncate max-w-[150px]">
+                  <span className="text-xs font-bold text-slate-200 truncate max-w-[150px]">
                     {(lang === 'ar' ? seller.arabicName : (seller.englishName || seller.arabicName)) || 'InvoCore'}
                   </span>
-                  <span className="text-[9.5px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-bold">
+                  <span className="text-[9.5px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 font-medium">
                     {seller.templateStyle === 'classic'
                       ? (lang === 'ar' ? 'كلاسيكي' : 'Classic')
                       : seller.templateStyle === 'minimalist'
@@ -1559,17 +1555,17 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('settings')}
-                  className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-md transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
                   title={lang === 'ar' ? 'تخصيص بيانات المنشأة والشعار والألوان' : 'Customize company branding & logo'}
                 >
-                  <Building2 className="w-3.5 h-3.5" />
+                  <Building2 className="w-3.5 h-3.5 text-teal-400" />
                   <span>{t.tabSettings}</span>
                 </button>
               </div>
             </div>
 
-            {/* CENTER POD: Document & Workspace Mode Group inside a bordered glass container */}
-            <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 w-full lg:w-auto min-w-0 bg-white/5 backdrop-blur-md border border-white/15 rounded-xl p-1">
+            {/* CENTER POD: Document & Workspace Mode Group */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 w-full lg:w-auto min-w-0 bg-slate-900/80 border border-slate-800 rounded-lg p-1">
               {/* Document Type Switcher */}
               <div
                 className={`w-full lg:w-auto gap-1.5 ${
@@ -1581,10 +1577,10 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setDocPrintView('invoice')}
-                  className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                  className={`justify-center px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
                     effectiveDocPrintView === 'invoice'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      ? 'bg-teal-600 text-white shadow-2xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -1596,10 +1592,10 @@ export function App() {
                     <button
                       type="button"
                       onClick={() => setDocPrintView('receipt')}
-                      className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                      className={`justify-center px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
                         effectiveDocPrintView === 'receipt'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                          ? 'bg-teal-600 text-white shadow-2xs'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
                       }`}
                       title={lang === 'ar' ? 'عرض وإصدار سند قبض (للفواتير الآجلة)' : 'View & issue receipt voucher'}
                     >
@@ -1610,10 +1606,10 @@ export function App() {
                     <button
                       type="button"
                       onClick={() => setDocPrintView('both')}
-                      className={`justify-center px-2.5 py-2 lg:py-1.5 rounded-lg text-xs lg:text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                      className={`justify-center px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
                         effectiveDocPrintView === 'both'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                          ? 'bg-teal-600 text-white shadow-2xs'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
                       }`}
                       title={lang === 'ar' ? 'عرض وطباعة الفاتورة الضريبية يليها سند القبض' : 'Print Invoice & Receipt voucher together'}
                     >
@@ -1625,50 +1621,50 @@ export function App() {
               </div>
 
               {/* Divider + Desktop View Mode Switcher */}
-              <div className="hidden xl:block w-[1px] h-5 bg-white/15 mx-0.5" />
+              <div className="hidden xl:block w-[1px] h-5 bg-slate-800 mx-0.5" />
               <div className="hidden xl:inline-flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('split')}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                     desktopLayoutMode === 'split'
-                      ? 'bg-[#B45309] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      ? 'bg-slate-800 text-white border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {lang === 'ar' ? 'تقسيم الشاشة' : 'Split'}
+                  {lang === 'ar' ? 'تقسيم' : 'Split'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('input')}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                     desktopLayoutMode === 'input'
-                      ? 'bg-[#B45309] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      ? 'bg-slate-800 text-white border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {lang === 'ar' ? 'تركيز الإدخال' : 'Input'}
+                  {lang === 'ar' ? 'الإدخال' : 'Input'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('preview')}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                     desktopLayoutMode === 'preview'
-                      ? 'bg-[#B45309] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      ? 'bg-slate-800 text-white border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {lang === 'ar' ? 'المعاينة فقط' : 'Preview'}
+                  {lang === 'ar' ? 'المعاينة' : 'Preview'}
                 </button>
               </div>
             </div>
 
-            {/* LEFT POD: Primary Action Buttons (1. طباعة / PDF, 2. مشاركة واتساب, 3. صفحة العميل, 4. + فاتورة جديدة) */}
+            {/* LEFT POD: Primary Action Buttons */}
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center w-full lg:w-auto min-w-0 gap-2">
               <button
                 type="button"
                 onClick={handlePrintCurrentDocument}
-                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-extrabold bg-[#B45309] hover:bg-[#D97706] text-white px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-bold bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-2 rounded-lg shadow-sm transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>{lang === 'ar' ? 'طباعة / PDF' : 'Print / PDF'}</span>
@@ -1677,28 +1673,28 @@ export function App() {
               <button
                 type="button"
                 onClick={handleWhatsAppShare}
-                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-extrabold bg-[#25D366] hover:bg-[#1DA851] text-slate-950 px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer"
+                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg shadow-sm transition-all cursor-pointer"
                 title={lang === 'ar' ? 'مشاركة رابط وتفاصيل الفاتورة مباشرة عبر واتساب' : 'Share invoice details directly via WhatsApp'}
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>{lang === 'ar' ? 'مشاركة واتساب' : 'WhatsApp'}</span>
+                <span>{lang === 'ar' ? 'واتساب' : 'WhatsApp'}</span>
               </button>
 
               <a
                 href={publicShareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg transition-colors cursor-pointer"
                 title={lang === 'ar' ? 'معاينة صفحة العميل العامة كما تظهر عند مسح الرابط بالكاميرا' : 'Preview public client page as opened via QR scan'}
               >
-                <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 <span>{lang === 'ar' ? 'صفحة العميل' : 'Client View'}</span>
               </a>
 
               <button
                 type="button"
                 onClick={handleStartNewSequentialInvoice}
-                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1 text-xs font-extrabold bg-transparent hover:bg-amber-500/15 text-amber-300 border border-amber-400/50 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                className="inline-flex justify-center items-center min-w-0 whitespace-nowrap gap-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 px-3 py-2 rounded-lg transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{lang === 'ar' ? 'فاتورة جديدة' : '+ New Invoice'}</span>
@@ -1741,8 +1737,8 @@ export function App() {
 
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed bottom-5 left-5 z-50 bg-[#0F172A] text-white border-r-4 border-r-[#B45309] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="fixed bottom-5 left-5 z-50 bg-[#0F172A] text-white border-r-4 border-r-teal-600 px-4 py-3 rounded-lg shadow-xl flex items-center gap-2.5 text-xs font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
@@ -1821,7 +1817,7 @@ export function App() {
                   }
                   className={`px-2 py-0.5 rounded font-extrabold transition-colors ${
                     desktopLayoutMode === 'input'
-                      ? 'bg-[#B45309] text-white'
+                      ? 'bg-slate-900 text-white'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
@@ -1835,35 +1831,35 @@ export function App() {
             {/* 4-Tab Navigation Header */}
             <div className="p-2 lg:p-2.5 bg-slate-50 border-b border-slate-200 shrink-0 w-full max-w-full">
               <div
-                className={`grid grid-cols-4 w-full gap-1 ${
+                className={`grid grid-cols-4 w-full gap-1.5 ${
                   desktopLayoutMode === 'input' ? 'max-w-4xl mx-auto' : ''
                 }`}
               >
                 <button
                   type="button"
                   onClick={() => setActiveTab('editor')}
-                  className={`min-w-0 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-extrabold flex items-center justify-center gap-1 transition-all ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'editor'
-                      ? 'bg-[#0F172A] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/70'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" />
+                  <FileText className={`w-3.5 h-3.5 ${activeTab === 'editor' ? 'text-teal-400' : 'text-slate-400'}`} />
                   <span className="truncate">{lang === 'ar' ? 'الفاتورة' : 'Invoice'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('catalog')}
-                  className={`min-w-0 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-extrabold flex items-center justify-center gap-1 transition-all ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'catalog'
-                      ? 'bg-[#0F172A] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/70'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
+                  <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'catalog' ? 'text-teal-400' : 'text-slate-400'}`} />
                   <span className="truncate">{lang === 'ar' ? 'الأصناف' : 'Catalog'}</span>
-                  <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
+                  <span className={`num-tabular text-[10px] px-1.5 py-0.2 rounded-md font-mono ${activeTab === 'catalog' ? 'bg-slate-800 text-teal-300' : 'bg-slate-200/80 text-slate-600'}`}>
                     {catalog.length}
                   </span>
                 </button>
@@ -1871,15 +1867,15 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('history')}
-                  className={`min-w-0 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-extrabold flex items-center justify-center gap-1 transition-all ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'history'
-                      ? 'bg-[#0F172A] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/70'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <History className="w-3.5 h-3.5 text-amber-400" />
+                  <History className={`w-3.5 h-3.5 ${activeTab === 'history' ? 'text-teal-400' : 'text-slate-400'}`} />
                   <span className="truncate">{lang === 'ar' ? 'السجل' : 'History'}</span>
-                  <span className="num-tabular text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full">
+                  <span className={`num-tabular text-[10px] px-1.5 py-0.2 rounded-md font-mono ${activeTab === 'history' ? 'bg-slate-800 text-teal-300' : 'bg-slate-200/80 text-slate-600'}`}>
                     {savedInvoices.length}
                   </span>
                 </button>
@@ -1887,13 +1883,13 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('settings')}
-                  className={`min-w-0 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-extrabold flex items-center justify-center gap-1 transition-all ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === 'settings'
-                      ? 'bg-[#0F172A] text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-200/70'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                  <Building2 className={`w-3.5 h-3.5 ${activeTab === 'settings' ? 'text-teal-400' : 'text-slate-400'}`} />
                   <span className="truncate">{lang === 'ar' ? 'إعدادات المنشأة' : 'Settings'}</span>
                 </button>
               </div>
@@ -1994,27 +1990,26 @@ export function App() {
                   <>
                     {/* Just Issued Celebration & Next Invoice Card */}
                     {justIssuedBanner && invoice.status === 'issued' && (
-                      <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3.5 space-y-2.5 shadow-sm">
-                        <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-xs">
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2 shadow-2xs">
+                        <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>
-                            تم حفظ الفاتورة #{invoice.invoiceNumber} في السجل
-                            بنجاح (إجمالي المحفوظات: {savedInvoices.length})!
+                            تم حفظ الفاتورة #{invoice.invoiceNumber} في السجل بنجاح (إجمالي المحفوظات: {savedInvoices.length})!
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={handlePrintCurrentDocument}
-                            className="flex items-center justify-center gap-1.5 bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors"
+                            className="flex items-center justify-center gap-1.5 bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs py-1.5 px-3 rounded-md transition-colors"
                           >
-                            <Printer className="w-3.5 h-3.5 text-amber-400" />
+                            <Printer className="w-3.5 h-3.5 text-teal-400" />
                             <span>طباعة / تحميل PDF</span>
                           </button>
                           <button
                             type="button"
                             onClick={handleStartNewSequentialInvoice}
-                            className="flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors num-tabular"
+                            className="flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs py-1.5 px-3 rounded-md transition-colors num-tabular"
                           >
                             <FilePlus2 className="w-3.5 h-3.5" />
                             <span>فتح فاتورة جديدة</span>
@@ -2022,481 +2017,6 @@ export function App() {
                         </div>
                       </div>
                     )}
-
-                    {/* Section 0: SaaS Company Brand Info & Template Style Switcher Card */}
-                    <section
-                      style={{ borderRightColor: seller.primaryColor || '#0F172A', borderRightWidth: '4px' }}
-                      className="bg-gradient-to-l from-slate-900 to-[#0F172A] text-white rounded-xl p-3.5 space-y-3 border border-slate-800 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
-                          <div>
-                            <h2 className="text-xs font-black">
-                              {seller.arabicName || 'منشأة الفوترة السحابية'}
-                            </h2>
-                            <p className="text-[10px] text-slate-300">
-                              {seller.englishName || 'SaaS Multi-Tenant Organization'}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('settings')}
-                          className="text-[11px] font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>تعديل الهوية والشعار ←</span>
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[10.5px] bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
-                        <div>
-                          <span className="text-slate-400">الرقم الضريبي: </span>
-                          <span className="font-bold text-amber-300 num-tabular">{seller.taxNumber || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">السجل التجاري: </span>
-                          <span className="font-bold text-white num-tabular">{seller.crNumber || '—'}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10.5px] font-bold text-slate-300 mb-1.5">
-                          نمط تصميم القالب المعتمد (Template Style):
-                        </label>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {TEMPLATE_STYLES.map((tpl) => {
-                            const isSelected = (seller.templateStyle || 'modern') === tpl.id;
-                            return (
-                              <button
-                                key={tpl.id}
-                                type="button"
-                                onClick={() => handleQuickTemplateChange(tpl.id)}
-                                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer flex flex-col items-center justify-center text-center ${
-                                  isSelected
-                                    ? 'bg-amber-400 text-slate-950 shadow-sm'
-                                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                                }`}
-                              >
-                                <span>{tpl.name}</span>
-                                <span className={`text-[9px] font-normal ${isSelected ? 'text-slate-800' : 'text-slate-400'}`}>
-                                  {tpl.englishLabel}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </section>
-
-                    {/* Multi-Jurisdiction Global Tax & Compliance Engine */}
-                    <section className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Globe className="w-4 h-4 text-[#B45309]" />
-                          <h2 className="text-xs font-extrabold text-[#0F172A]">
-                            {lang === 'ar' ? 'سوق الفاتورة والامتثال الضريبي' : 'Tax Jurisdiction & Compliance'}
-                          </h2>
-                        </div>
-                        <span className="text-[10.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          {marketConfig.flag} {lang === 'ar' ? marketConfig.countryNameAr : marketConfig.countryNameEn}
-                        </span>
-                      </div>
-
-                      {/* 4 Market Cards */}
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(Object.keys(JURISDICTIONS) as TaxJurisdiction[]).map((jCode) => {
-                          const j = JURISDICTIONS[jCode];
-                          const isCurrent = currentJurisdiction === jCode;
-                          return (
-                            <button
-                              key={jCode}
-                              type="button"
-                              onClick={() => {
-                                updateInvoice({
-                                  jurisdiction: jCode,
-                                  vatRate: j.defaultVatRate,
-                                  withholdingTaxRate: jCode === 'EGY' ? 1 : 0,
-                                  isReverseCharge: false,
-                                  qrMode: jCode === 'KSA' ? 'zatca' : 'web',
-                                });
-                                setSeller((prev) => ({ ...prev, jurisdiction: jCode }));
-                                saveSellerToStorage({ ...seller, jurisdiction: jCode });
-                                showToast(
-                                  lang === 'ar'
-                                    ? `تم التبديل إلى: ${j.countryNameAr} (${j.currencySymbolAr})`
-                                    : `Switched to: ${j.countryNameEn} (${j.currencySymbolEn})`
-                                );
-                              }}
-                              className={`p-2 rounded-lg border text-right transition-all flex flex-col justify-between cursor-pointer ${
-                                isCurrent
-                                  ? 'bg-[#0F172A] text-white border-amber-500 shadow-sm'
-                                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-base">{j.flag}</span>
-                                <span className={`text-[9.5px] font-mono px-1 py-0.2 rounded font-bold ${isCurrent ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'}`}>
-                                  {j.currencyCode}
-                                </span>
-                              </div>
-                              <div className="mt-1">
-                                <p className="text-[11px] font-black truncate leading-tight">
-                                  {lang === 'ar' ? j.countryNameAr : j.countryNameEn}
-                                </p>
-                                <p className={`text-[9px] truncate ${isCurrent ? 'text-slate-300' : 'text-slate-500'}`}>
-                                  {lang === 'ar' ? j.authorityNameAr : j.authorityNameEn}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Jurisdiction-Specific Quick Presets & Options */}
-                      {currentJurisdiction === 'EGY' && (
-                        <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900">
-                            <span>خصم ضريبة أرباح تجارية (خصم من المنبع):</span>
-                            <span className="font-mono">{invoice.withholdingTaxRate ?? 1}%</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-1">
-                            {[
-                              { label: '0% بدون خصم', rate: 0 },
-                              { label: '1% توريدات', rate: 1 },
-                              { label: '3% خدمات', rate: 3 },
-                            ].map((w) => (
-                              <button
-                                key={w.rate}
-                                type="button"
-                                onClick={() => updateInvoice({ withholdingTaxRate: w.rate })}
-                                className={`py-1 text-[10.5px] font-bold rounded border transition-colors cursor-pointer ${
-                                  (invoice.withholdingTaxRate ?? 1) === w.rate
-                                    ? 'bg-emerald-700 text-white border-emerald-800'
-                                    : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100/50'
-                                }`}
-                              >
-                                {w.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {currentJurisdiction === 'EU' && (
-                        <div className="bg-sky-50/80 border border-sky-200 rounded-lg p-2.5 space-y-2 text-xs">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={!!invoice.isReverseCharge}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                updateInvoice({
-                                  isReverseCharge: checked,
-                                  vatRate: checked ? 0 : 20,
-                                });
-                              }}
-                              className="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
-                            />
-                            <span className="text-[11px] font-bold text-sky-900">
-                              {lang === 'ar' ? 'تطبيق التكليف العكسي (B2B Reverse Charge - Article 196)' : 'Apply B2B Reverse Charge (Article 196 - 0% VAT)'}
-                            </span>
-                          </label>
-
-                          {!invoice.isReverseCharge && (
-                            <div>
-                              <span className="block text-[10px] font-bold text-sky-800 mb-1">
-                                {lang === 'ar' ? 'معدلات ضريبة القيمة المضافة الأوروبية الشائعة:' : 'Common EU VAT Rates:'}
-                              </span>
-                              <div className="grid grid-cols-4 gap-1">
-                                {[
-                                  { label: 'DE 19%', rate: 19 },
-                                  { label: 'FR 20%', rate: 20 },
-                                  { label: 'ES/NL 21%', rate: 21 },
-                                  { label: '0% معفى', rate: 0 },
-                                ].map((p) => (
-                                  <button
-                                    key={p.rate}
-                                    type="button"
-                                    onClick={() => updateInvoice({ vatRate: p.rate })}
-                                    className={`py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer ${
-                                      (invoice.vatRate ?? 20) === p.rate
-                                        ? 'bg-sky-700 text-white border-sky-800'
-                                        : 'bg-white text-sky-800 border-sky-300 hover:bg-sky-100/60'
-                                    }`}
-                                  >
-                                    {p.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {currentJurisdiction === 'USA' && (
-                        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 space-y-1.5 text-xs">
-                          <span className="block text-[10px] font-bold text-amber-900">
-                            {lang === 'ar' ? 'معدلات ضريبة المبيعات بالولايات (State Sales Tax):' : 'US State Sales Tax Presets:'}
-                          </span>
-                          <div className="grid grid-cols-4 gap-1">
-                            {[
-                              { label: 'معفى 0%', rate: 0 },
-                              { label: 'TX 6.25%', rate: 6.25 },
-                              { label: 'CA 7.25%', rate: 7.25 },
-                              { label: 'NY 8.875%', rate: 8.875 },
-                            ].map((p) => (
-                              <button
-                                key={p.rate}
-                                type="button"
-                                onClick={() => updateInvoice({ vatRate: p.rate })}
-                                className={`py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer ${
-                                  (invoice.vatRate ?? 8) === p.rate
-                                    ? 'bg-amber-700 text-white border-amber-800'
-                                    : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100/60'
-                                }`}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {currentJurisdiction === 'KSA' && (
-                        <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 space-y-1.5 text-xs">
-                          <span className="block text-[10px] font-bold text-amber-900">
-                            {lang === 'ar' ? 'معدلات ضريبة هيئة الزكاة والضريبة (ZATCA):' : 'ZATCA Tax Presets:'}
-                          </span>
-                          <div className="grid grid-cols-2 gap-1">
-                            {[
-                              { label: 'ضريبة قياسية 15%', rate: 15 },
-                              { label: 'صادرات / صفرية 0%', rate: 0 },
-                            ].map((p) => (
-                              <button
-                                key={p.rate}
-                                type="button"
-                                onClick={() => updateInvoice({ vatRate: p.rate })}
-                                className={`py-1 text-[10.5px] font-bold rounded border transition-colors cursor-pointer ${
-                                  (invoice.vatRate ?? 15) === p.rate
-                                    ? 'bg-amber-700 text-white border-amber-800'
-                                    : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100/60'
-                                }`}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </section>
-
-                    {/* Section A: Single Default Web PDF QR Selector */}
-                    <section className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <QrCode className="w-4 h-4 text-[#B45309]" />
-                          <h2 className="text-xs font-extrabold text-[#0F172A]">
-                            رمز الاستجابة السريعة الموحد (QR Code)
-                          </h2>
-                        </div>
-                        <span className="text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          رمز واحد نظيف في كل فاتورة
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-1.5 bg-slate-200/80 p-1 rounded-xl">
-                        {(
-                          [
-                            {
-                              id: 'web',
-                              label: 'رابط PDF للعميل (الافتراضي)',
-                              icon: Smartphone,
-                            },
-                            {
-                              id: 'zatca',
-                              label: 'تشفير ZATCA TLV Base64',
-                              icon: ShieldCheck,
-                            },
-                          ] as Array<{
-                            id: QrEncodingMode;
-                            label: string;
-                            icon: React.FC<{ className?: string }>;
-                          }>
-                        ).map((opt) => {
-                          const Icon = opt.icon;
-                          const active =
-                            (opt.id === 'web' && invoice.qrMode !== 'zatca') ||
-                            (opt.id === 'zatca' && invoice.qrMode === 'zatca');
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => updateInvoice({ qrMode: opt.id })}
-                              className={`py-2 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                active
-                                  ? 'bg-[#0F172A] text-white shadow-sm'
-                                  : 'text-slate-600 hover:text-slate-900'
-                              }`}
-                            >
-                              <Icon
-                                className={`w-3.5 h-3.5 shrink-0 ${
-                                  active ? 'text-amber-400' : 'text-slate-500'
-                                }`}
-                              />
-                              <span className="truncate">{opt.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {invoice.qrMode === 'both' && (
-                        <div className="space-y-2 pt-0.5">
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600">
-                            <span>
-                              رمز <strong>ZATCA</strong> في الترويسة + رمز{' '}
-                              <strong>PDF</strong> في الأسفل بحجم مدمج أنيق.
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowZatcaInspector((prev) => !prev)
-                              }
-                              className="shrink-0 inline-flex items-center gap-1 font-bold text-[#B45309] hover:underline"
-                            >
-                              <span>فحص TLV</span>
-                              {showZatcaInspector ? (
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={handleCopyShareUrl}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-white hover:bg-amber-50 text-[#0F172A] border border-slate-300 py-1.5 px-3 rounded-lg transition-colors"
-                            >
-                              {copiedClientLink ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span className="text-emerald-700">
-                                    تم نسخ الرابط!
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3.5 h-3.5 text-[#B45309]" />
-                                  <span>نسخ رابط الفاتورة للعميل</span>
-                                </>
-                              )}
-                            </button>
-                            <a
-                              href={publicShareUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold bg-[#0F172A] text-white py-1.5 px-3 rounded-lg hover:bg-slate-800 transition-colors"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                              <span>تجربة</span>
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
-                      {invoice.qrMode === 'zatca' && (
-                        <div className="text-[11px] text-slate-600 leading-relaxed flex items-center justify-between gap-2 pt-0.5">
-                          <span>
-                            تشفير TLV Base64 معتمد للمرحلة الأولى متوافق مع تطبيق
-                            هيئة الزكاة والضريبة والجمارك.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setShowZatcaInspector((prev) => !prev)
-                            }
-                            className="shrink-0 inline-flex items-center gap-1 font-bold text-[#B45309] hover:underline"
-                          >
-                            <span>فحص TLV</span>
-                            {showZatcaInspector ? (
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            ) : (
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      )}
-
-                      {invoice.qrMode === 'web' && (
-                        <div className="space-y-2 pt-0.5">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={handleCopyShareUrl}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-bold bg-white hover:bg-amber-50 text-[#0F172A] border border-slate-300 py-1.5 px-3 rounded-lg transition-colors"
-                            >
-                              {copiedClientLink ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span className="text-emerald-700">
-                                    تم نسخ الرابط!
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3.5 h-3.5 text-[#B45309]" />
-                                  <span>نسخ رابط الفاتورة للعميل</span>
-                                </>
-                              )}
-                            </button>
-                            <a
-                              href={publicShareUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold bg-[#0F172A] text-white py-1.5 px-3 rounded-lg hover:bg-slate-800 transition-colors"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                              <span>تجربة</span>
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
-                      {showZatcaInspector && (
-                        <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-1.5 text-[11px]">
-                          <div className="font-extrabold text-slate-700 border-b border-slate-100 pb-1 flex items-center justify-between">
-                            <span>فك تشفير وسوم ZATCA الحية (UTF-8 TLV):</span>
-                            <span
-                              dir="ltr"
-                              className="num-tabular text-[10px] text-slate-400"
-                            >
-                              {zatcaBase64.length} chars Base64
-                            </span>
-                          </div>
-                          {decodedZatcaTags.map((t) => (
-                            <div
-                              key={t.tag}
-                              className="flex items-center justify-between gap-2 text-[10.5px] py-0.5 border-b border-slate-50 last:border-none"
-                            >
-                              <span className="text-slate-500 font-semibold shrink-0">
-                                [{t.tag}] {t.label}{' '}
-                                <span className="num-tabular text-slate-400">
-                                  ({t.byteLength}B)
-                                </span>
-                              </span>
-                              <span
-                                dir="auto"
-                                className="font-bold text-[#0F172A] num-tabular truncate max-w-[190px]"
-                              >
-                                {t.value}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </section>
 
                     {/* 2-Column Grid Wrapper when in Full Input Mode or Wide Split Panel */}
                     <div
@@ -2506,12 +2026,12 @@ export function App() {
                           : 'space-y-5'
                       }
                     >
-                      {/* Section B: Invoice Metadata (Manual Invoice Number + 12h Time) */}
-                      <section className="space-y-3 bg-slate-50/60 border border-slate-200/80 rounded-xl p-3.5">
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                          <h2 className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-[#B45309]" />
-                            <span>بيانات الفاتورة الأساسية</span>
+                      {/* Section B: Basic Invoice Details (Immediate Entry at Top) */}
+                      <section className="space-y-3.5 bg-white border border-slate-200 rounded-lg p-4 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-teal-600" />
+                            <span>{lang === 'ar' ? 'بيانات الفاتورة الأساسية' : 'Basic Invoice Details'}</span>
                           </h2>
                           <button
                             type="button"
@@ -2521,36 +2041,36 @@ export function App() {
                                 time: getCurrentTimeString(),
                               })
                             }
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-[#B45309] transition-colors"
-                            title="تحديث التاريخ والوقت للحظة الحالية"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-teal-700 transition-colors"
+                            title={lang === 'ar' ? 'تحديث التاريخ والوقت للحظة الحالية' : 'Update date and time to now'}
                           >
                             <RefreshCw className="w-3 h-3" />
-                            <span>تحديث الوقت الآن</span>
+                            <span>{lang === 'ar' ? 'تحديث الوقت الآن' : 'Update time'}</span>
                           </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           {/* Manual Invoice Number */}
                           <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">
-                              رقم الفاتورة (إدخال يدوي حر)
+                            <label className="block text-[11.5px] font-semibold text-slate-700 mb-1">
+                              {lang === 'ar' ? 'رقم الفاتورة (إدخال حر)' : 'Invoice Number'}
                             </label>
                             <input
                               type="text"
                               dir="ltr"
-                              placeholder="اكتب رقم الفاتورة..."
+                              placeholder="e.g. INV-2026-001"
                               value={invoice.invoiceNumber}
                               onChange={(e) =>
                                 updateInvoice({ invoiceNumber: e.target.value })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-extrabold text-right num-tabular text-[#0F172A] focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-right num-tabular text-slate-900 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none transition-all"
                             />
                           </div>
 
                           {/* Payment Method */}
                           <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">
-                              طريقة الدفع
+                            <label className="block text-[11.5px] font-semibold text-slate-700 mb-1">
+                              {lang === 'ar' ? 'طريقة الدفع' : 'Payment Method'}
                             </label>
                             <select
                               value={invoice.paymentMethod}
@@ -2565,7 +2085,7 @@ export function App() {
                                   setDocPrintView('invoice');
                                 }
                               }}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none transition-all"
                             >
                               {PAYMENT_METHODS.map((pm) => (
                                 <option key={pm} value={pm}>
@@ -2577,8 +2097,8 @@ export function App() {
 
                           {/* Date (YYYY/MM/DD) */}
                           <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">
-                              التاريخ (YYYY/MM/DD)
+                            <label className="block text-[11.5px] font-semibold text-slate-700 mb-1">
+                              {lang === 'ar' ? 'التاريخ (YYYY/MM/DD)' : 'Date'}
                             </label>
                             <input
                               type="date"
@@ -2589,17 +2109,17 @@ export function App() {
                                   date: isoInputToSlashDate(e.target.value),
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-right num-tabular text-slate-900 focus:border-[#B45309] outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-right num-tabular text-slate-900 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none transition-all"
                             />
                           </div>
 
                           {/* Time (12-Hour Format Display + Picker) */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <label className="text-[11.5px] font-bold text-slate-700">
-                                الوقت (نظام 12 ساعة)
+                              <label className="text-[11.5px] font-semibold text-slate-700">
+                                {lang === 'ar' ? 'الوقت' : 'Time'}
                               </label>
-                              <span className="text-[10.5px] font-extrabold text-[#B45309] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 num-tabular">
+                              <span className="text-[10px] font-mono font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 num-tabular">
                                 {formatTime12hArabic(invoice.time)}
                               </span>
                             </div>
@@ -2610,15 +2130,15 @@ export function App() {
                               onChange={(e) =>
                                 updateInvoice({ time: e.target.value })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-right num-tabular text-slate-900 focus:border-[#B45309] outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-right num-tabular text-slate-900 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none transition-all"
                             />
                           </div>
 
                           {/* Items Count (Auto + Manual Override) */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <label className="text-[11.5px] font-bold text-slate-700">
-                                عدد الأصناف
+                              <label className="text-[11.5px] font-semibold text-slate-700">
+                                {lang === 'ar' ? 'عدد الأصناف' : 'Items Count'}
                               </label>
                               <button
                                 type="button"
@@ -2630,11 +2150,11 @@ export function App() {
                                         : null,
                                   })
                                 }
-                                className="text-[10.5px] font-bold text-[#B45309] hover:underline"
+                                className="text-[10.5px] font-semibold text-teal-700 hover:underline"
                               >
                                 {invoice.itemsCountManual === null
-                                  ? 'تعديل يدوي'
-                                  : 'تلقائي'}
+                                  ? (lang === 'ar' ? 'تعديل يدوي' : 'Manual')
+                                  : (lang === 'ar' ? 'تلقائي' : 'Auto')}
                               </button>
                             </div>
                             <input
@@ -2650,10 +2170,10 @@ export function App() {
                                   itemsCountManual: e.target.value,
                                 })
                               }
-                              className={`w-full rounded-lg border px-3 py-1.5 text-xs font-bold num-tabular outline-none ${
+                              className={`w-full rounded-md border px-3 py-2 text-xs font-bold num-tabular outline-none ${
                                 invoice.itemsCountManual === null
-                                  ? 'bg-slate-100 border-slate-200 text-slate-600'
-                                  : 'bg-white border-amber-400 text-slate-900'
+                                  ? 'bg-slate-50 border-slate-200 text-slate-600'
+                                  : 'bg-white border-teal-500 text-slate-900'
                               }`}
                             />
                           </div>
@@ -2661,8 +2181,8 @@ export function App() {
                           {/* Page Number (Auto + Manual Override - 15 items/page) */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <label className="text-[11.5px] font-bold text-slate-700">
-                                الصفحات (15 بند/صفحة)
+                              <label className="text-[11.5px] font-semibold text-slate-700">
+                                {lang === 'ar' ? 'الصفحات (15 بند/صفحة)' : 'Pages'}
                               </label>
                               <button
                                 type="button"
@@ -2676,11 +2196,11 @@ export function App() {
                                         : null,
                                   })
                                 }
-                                className="text-[10.5px] font-bold text-[#B45309] hover:underline"
+                                className="text-[10.5px] font-semibold text-teal-700 hover:underline"
                               >
                                 {invoice.pageNumberManual === null
-                                  ? 'تعديل يدوي'
-                                  : 'تلقائي'}
+                                  ? (lang === 'ar' ? 'تعديل يدوي' : 'Manual')
+                                  : (lang === 'ar' ? 'تلقائي' : 'Auto')}
                               </button>
                             </div>
                             <input
@@ -2696,28 +2216,118 @@ export function App() {
                                   pageNumberManual: e.target.value,
                                 })
                               }
-                              className={`w-full rounded-lg border px-3 py-1.5 text-xs font-bold num-tabular outline-none ${
+                              className={`w-full rounded-md border px-3 py-2 text-xs font-bold num-tabular outline-none ${
                                 invoice.pageNumberManual === null
-                                  ? 'bg-slate-100 border-slate-200 text-slate-600'
-                                  : 'bg-white border-amber-400 text-slate-900'
+                                  ? 'bg-slate-50 border-slate-200 text-slate-600'
+                                  : 'bg-white border-teal-500 text-slate-900'
                               }`}
                             />
+                          </div>
+
+                          {/* Compact QR Code Selector inside Section B */}
+                          <div className="col-span-2 pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="text-[11.5px] font-semibold text-slate-700 flex items-center gap-1.5">
+                                <QrCode className="w-3.5 h-3.5 text-teal-600" />
+                                <span>{lang === 'ar' ? 'معيار رمز الاستجابة (QR Standard)' : 'QR Code Standard'}</span>
+                              </label>
+                              {invoice.qrMode === 'zatca' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowZatcaInspector((prev) => !prev)}
+                                  className="text-[10.5px] font-semibold text-teal-700 hover:underline inline-flex items-center gap-0.5"
+                                >
+                                  <span>{lang === 'ar' ? 'فحص وسوم TLV' : 'Inspect TLV'}</span>
+                                  {showZatcaInspector ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={handleCopyShareUrl}
+                                  className="text-[10.5px] font-semibold text-teal-700 hover:underline inline-flex items-center gap-1"
+                                >
+                                  {copiedClientLink ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                      <span className="text-emerald-700">{lang === 'ar' ? 'تم نسخ الرابط!' : 'Link copied!'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span>{lang === 'ar' ? 'نسخ رابط الفاتورة للعميل' : 'Copy link'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => updateInvoice({ qrMode: 'web' })}
+                                className={`py-1.5 px-2 rounded-md text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                  invoice.qrMode !== 'zatca'
+                                    ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                <Smartphone className="w-3.5 h-3.5 text-teal-600" />
+                                <span>{lang === 'ar' ? 'رابط PDF للعميل (الافتراضي)' : 'Web Viewer Link'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => updateInvoice({ qrMode: 'zatca' })}
+                                className={`py-1.5 px-2 rounded-md text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                  invoice.qrMode === 'zatca'
+                                    ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>{lang === 'ar' ? 'تشفير ZATCA TLV Base64' : 'ZATCA TLV Base64'}</span>
+                              </button>
+                            </div>
+
+                            {showZatcaInspector && invoice.qrMode === 'zatca' && (
+                              <div className="mt-2 bg-slate-50 border border-slate-200 rounded-md p-2.5 space-y-1 text-[11px]">
+                                <div className="font-bold text-slate-700 border-b border-slate-200 pb-1 flex items-center justify-between">
+                                  <span>وسوم ZATCA الحية (UTF-8 TLV):</span>
+                                  <span dir="ltr" className="num-tabular text-[10px] text-slate-400">
+                                    {zatcaBase64.length} chars Base64
+                                  </span>
+                                </div>
+                                {decodedZatcaTags.map((t) => (
+                                  <div
+                                    key={t.tag}
+                                    className="flex items-center justify-between gap-2 text-[10.5px] py-0.5 border-b border-slate-100 last:border-none"
+                                  >
+                                    <span className="text-slate-500 font-medium shrink-0">
+                                      [{t.tag}] {t.label} ({t.byteLength}B)
+                                    </span>
+                                    <span dir="auto" className="font-bold text-slate-900 num-tabular truncate max-w-[190px]">
+                                      {t.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </section>
 
                       {/* Section C: Client Details & Saved Directory */}
-                      <section className="space-y-3 bg-slate-50/60 border border-slate-200/80 rounded-xl p-3.5">
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                          <h2 className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1.5">
-                            <Users className="w-4 h-4 text-[#B45309]" />
+                      <section className="space-y-3 bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-teal-600" />
                             <span>بيانات العميل ودفتر العملاء</span>
                           </h2>
                           <div className="flex items-center gap-2 text-[11px]">
                             <button
                               type="button"
                               onClick={handleSaveCurrentClient}
-                              className="font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 cursor-pointer bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shadow-xs"
+                              className="font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1 cursor-pointer bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shadow-2xs"
                               title="حفظ بيانات العميل الحالية في دفتر العملاء للاستخدام لاحقاً"
                             >
                               <BookmarkPlus className="w-3.5 h-3.5" />
@@ -2727,7 +2337,7 @@ export function App() {
                             <button
                               type="button"
                               onClick={handleClearClient}
-                              className="font-bold text-red-600 hover:text-red-800 cursor-pointer"
+                              className="font-semibold text-rose-600 hover:text-rose-800 cursor-pointer"
                               title="تفريغ جميع خانات العميل"
                             >
                               تفريغ
@@ -2736,10 +2346,10 @@ export function App() {
                         </div>
 
                         {/* Quick Select Saved Client Dropdown */}
-                        <div className="bg-white rounded-lg border border-amber-300/80 p-2 shadow-xs">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-amber-900 mb-1">
+                        <div className="bg-slate-50/80 rounded-lg border border-slate-200 p-2">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
                             <span className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5 text-[#B45309]" />
+                              <Users className="w-3.5 h-3.5 text-teal-600" />
                               <span>دفتر العملاء المحفوظين ({savedClients.length}):</span>
                             </span>
                             {selectedSavedClientId && (
@@ -2748,7 +2358,7 @@ export function App() {
                                 onClick={() =>
                                   handleDeleteSavedClient(selectedSavedClientId)
                                 }
-                                className="text-red-500 hover:text-red-700 text-[10.5px] flex items-center gap-0.5 cursor-pointer font-bold"
+                                className="text-rose-500 hover:text-rose-700 text-[10.5px] flex items-center gap-0.5 cursor-pointer font-semibold"
                                 title="حذف العميل المحدد من الدفتر"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -2761,7 +2371,7 @@ export function App() {
                             onChange={(e) =>
                               handleSelectSavedClient(e.target.value)
                             }
-                            className="w-full text-xs font-bold text-slate-800 bg-amber-50/50 border border-amber-200 rounded-md px-2 py-1.5 outline-none cursor-pointer focus:border-[#B45309]"
+                            className="w-full text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-md px-2 py-1.5 outline-none cursor-pointer focus:border-teal-600 focus:ring-1 focus:ring-teal-600/20"
                           >
                             <option value="">
                               -- اختر عميلاً للملء التلقائي بنقرة واحدة ({savedClients.length} عملاء) --
@@ -2786,7 +2396,7 @@ export function App() {
                                 updateClient({ name: e.target.value })
                               }
                               placeholder="اسم الشركة أو العميل..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none"
                             />
                           </div>
 
@@ -2803,7 +2413,7 @@ export function App() {
                                   updateClient({ taxNumber: e.target.value })
                                 }
                                 placeholder="300XXXXXXXXX003"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
                               />
                             </div>
 
@@ -2819,7 +2429,7 @@ export function App() {
                                   updateClient({ phone: e.target.value })
                                 }
                                 placeholder="05XXXXXXXX"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
                               />
                             </div>
                           </div>
@@ -2835,7 +2445,7 @@ export function App() {
                                 updateClient({ address: e.target.value })
                               }
                               placeholder="المدينة - الحي - الرمز البريدي..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold focus:border-teal-600 outline-none"
                             />
                           </div>
 
@@ -2850,7 +2460,7 @@ export function App() {
                                 updateClient({ notes: e.target.value })
                               }
                               placeholder="سجل تجاري / رقم التعميد..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold focus:border-teal-600 outline-none"
                             />
                           </div>
                         </div>
@@ -2859,10 +2469,10 @@ export function App() {
 
                     {/* Section D: Dynamic Line Items + Full Invoice Excel Export + Append/Replace Excel Import */}
                     <section className="space-y-3">
-                      <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 space-y-2.5">
+                      <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2.5 shadow-2xs">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h2 className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1.5">
-                            <Database className="w-4 h-4 text-[#B45309]" />
+                          <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <Database className="w-4 h-4 text-teal-600" />
                             <span>
                               بنود الفاتورة ({invoice.items.length} بند —{' '}
                               {totalPages} {totalPages === 1 ? 'صفحة' : 'صفحات'})
@@ -2872,7 +2482,7 @@ export function App() {
                           <button
                             type="button"
                             onClick={() => downloadInvoiceItemsTemplate()}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B45309] hover:underline cursor-pointer"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
                             title="تحميل قالب فارغ للتعبئة (6 أعمدة: المسلسل، البيان، الوحدة، الكمية، السعر قبل الضريبة، الإجمالي)"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -2899,10 +2509,10 @@ export function App() {
                               }) إلى إكسل بنجاح!`
                             );
                           }}
-                          className="w-full flex items-center justify-center gap-2 bg-[#0F172A] hover:bg-slate-800 text-amber-300 font-extrabold text-xs py-2.5 px-3 rounded-xl shadow-xs transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-3 rounded-lg shadow-2xs transition-colors cursor-pointer"
                           title="يصدّر كافة الأصناف الموجودة في الفاتورة الحالية عبر جميع الصفحات (6 أعمدة + ملخص الضريبة والإجمالي)"
                         >
-                          <Download className="w-4 h-4 text-amber-400" />
+                          <Download className="w-4 h-4 text-teal-400" />
                           <span>
                             تصدير بنود الفاتورة الحالية إلى إكسل (.xlsx) — (
                             {invoice.items.length} بند)
@@ -2915,7 +2525,7 @@ export function App() {
                             type="button"
                             disabled={isImportingInvoiceExcel}
                             onClick={() => triggerInvoiceExcelUpload('append')}
-                            className="flex items-center justify-center gap-1.5 text-[11px] font-extrabold bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-2 rounded-lg shadow-xs transition-colors cursor-pointer"
+                            className="flex items-center justify-center gap-1.5 text-[11px] font-bold bg-teal-600 hover:bg-teal-700 text-white px-2.5 py-2 rounded-lg shadow-2xs transition-colors cursor-pointer"
                             title="إضافة البنود المستوردة من إكسل على البنود الموجودة حالياً في الفاتورة دون مسحها"
                           >
                             <Upload className="w-3.5 h-3.5" />
@@ -2928,10 +2538,10 @@ export function App() {
                             type="button"
                             disabled={isImportingInvoiceExcel}
                             onClick={() => triggerInvoiceExcelUpload('replace')}
-                            className="flex items-center justify-center gap-1.5 text-[11px] font-bold bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 px-2.5 py-2 rounded-lg transition-colors cursor-pointer"
+                            className="flex items-center justify-center gap-1.5 text-[11px] font-semibold bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-2.5 py-2 rounded-lg transition-colors cursor-pointer"
                             title="استبدال البنود الحالية ببنود شيت الإكسل الجديد"
                           >
-                            <Upload className="w-3.5 h-3.5 text-[#B45309]" />
+                            <Upload className="w-3.5 h-3.5 text-teal-600" />
                             <span>استيراد واستبدال بنود الفاتورة</span>
                           </button>
                         </div>
@@ -2955,39 +2565,39 @@ export function App() {
                       <button
                         type="button"
                         onClick={handleAddLineItem}
-                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#B45309] hover:bg-amber-50/40 text-xs font-extrabold text-slate-700 hover:text-[#B45309] flex items-center justify-center gap-1.5 transition-all"
+                        className="w-full py-2.5 rounded-lg border border-dashed border-slate-300 hover:border-teal-600 hover:bg-teal-50/20 text-xs font-bold text-slate-700 hover:text-teal-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <Plus className="w-4 h-4 text-[#B45309]" />
+                        <Plus className="w-4 h-4 text-teal-600" />
                         <span>إضافة بند جديد إلى الفاتورة</span>
                       </button>
                     </section>
 
                     {/* Section E: Financial Summary, Editable VAT %, Flexible Discount, Paid Amount & Tafqeet */}
-                    <section className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
-                      <h2 className="text-xs font-extrabold text-[#0F172A] border-b border-slate-200 pb-2 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-[#B45309]" />
+                    <section className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-3 shadow-2xs">
+                      <h2 className="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-teal-600" />
                         <span>
                           الحسابات الختامية ونسبة الضريبة والخصم المرن
                         </span>
                       </h2>
 
                       {/* Flexible Discount & Editable VAT % Controls */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2.5">
+                      <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-2.5 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <label className="text-[11.5px] font-extrabold text-slate-700 flex items-center gap-1">
-                            <Percent className="w-3.5 h-3.5 text-[#B45309]" />
+                          <label className="text-[11.5px] font-bold text-slate-700 flex items-center gap-1">
+                            <Percent className="w-3.5 h-3.5 text-teal-600" />
                             <span>الخصم ونسبة الضريبة المضافة</span>
                           </label>
-                          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
+                          <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 shadow-2xs">
                             <button
                               type="button"
                               onClick={() =>
                                 updateInvoice({ discountType: 'amount' })
                               }
-                              className={`px-2 py-0.5 rounded-md text-[10.5px] font-extrabold transition-all ${
+                              className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
                                 invoice.discountType !== 'percentage'
-                                  ? 'bg-[#0F172A] text-white'
-                                  : 'text-slate-600'
+                                  ? 'bg-slate-900 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
                               خصم مبلغ (ر.س)
@@ -2997,10 +2607,10 @@ export function App() {
                               onClick={() =>
                                 updateInvoice({ discountType: 'percentage' })
                               }
-                              className={`px-2 py-0.5 rounded-md text-[10.5px] font-extrabold transition-all ${
+                              className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
                                 invoice.discountType === 'percentage'
-                                  ? 'bg-[#B45309] text-white'
-                                  : 'text-slate-600'
+                                  ? 'bg-slate-900 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
                               }`}
                             >
                               خصم نسبة (%)
@@ -3034,7 +2644,7 @@ export function App() {
                                       : parseFloat(e.target.value),
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
                             />
                           </div>
 
@@ -3056,13 +2666,13 @@ export function App() {
                                       : parseFloat(e.target.value),
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
                             />
                           </div>
 
                           {/* Editable VAT Rate (%) */}
                           <div>
-                            <label className="block text-[10.5px] font-extrabold text-[#B45309] mb-1">
+                            <label className="block text-[10.5px] font-bold text-slate-700 mb-1">
                               نسبة الضريبة (%)
                             </label>
                             <input
@@ -3080,7 +2690,7 @@ export function App() {
                                       : parseFloat(e.target.value),
                                 })
                               }
-                              className="w-full rounded-lg border border-amber-300 bg-amber-50/40 px-2.5 py-1.5 text-xs font-extrabold text-right num-tabular text-[#0F172A] focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular text-slate-900 focus:border-teal-600 outline-none"
                             />
                           </div>
 
@@ -3102,13 +2712,13 @@ export function App() {
                                       : parseFloat(e.target.value),
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
                             />
                           </div>
                         </div>
 
                         {totals.totalDiscount > 0 && (
-                          <div className="text-[11px] font-bold text-[#B45309] bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 flex items-center justify-between num-tabular">
+                          <div className="text-[11px] font-semibold text-teal-800 bg-teal-50 border border-teal-200/80 rounded-lg px-2.5 py-1 flex items-center justify-between num-tabular">
                             <span>{lang === 'ar' ? 'إجمالي الخصم المقتطع قبل الضريبة:' : 'Total Discount before Tax:'}</span>
                             <span>{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
                           </div>
@@ -3126,11 +2736,11 @@ export function App() {
                           </span>
                         </div>
                         {totals.totalDiscount > 0 && (
-                          <div className="px-3 py-2 flex justify-between bg-amber-50/40">
-                            <span className="text-slate-700 font-bold">
+                          <div className="px-3 py-2 flex justify-between bg-slate-50">
+                            <span className="text-slate-700 font-semibold">
                               {lang === 'ar' ? 'الصافي الخاضع للضريبة (بعد الخصم):' : 'Taxable Net (after Discount):'}
                             </span>
-                            <span className="num-tabular font-bold text-[#92400E]">
+                            <span className="num-tabular font-bold text-slate-900">
                               {formatMoney(totals.taxableAmount)} {currencySymbol}
                             </span>
                           </div>
@@ -3139,13 +2749,13 @@ export function App() {
                           <span className="text-slate-600 font-semibold">
                             {lang === 'ar' ? marketConfig.taxShortLabelAr : marketConfig.taxShortLabelEn} ({totals.vatRate}%):
                           </span>
-                          <span className="num-tabular font-bold text-[#B45309]">
+                          <span className="num-tabular font-bold text-slate-900">
                             {formatMoney(totals.vatAmount)} {currencySymbol}
                           </span>
                         </div>
                         {totals.withholdingTaxAmount !== undefined && totals.withholdingTaxAmount > 0 && (
                           <div className="px-3 py-2 flex justify-between bg-rose-50/60 text-rose-700">
-                            <span className="font-bold">
+                            <span className="font-semibold">
                               {lang === 'ar' ? `خصم أرباح تجارية (خصم من المنبع ${totals.withholdingTaxRate}%):` : `Withholding Tax Deduction (${totals.withholdingTaxRate}%):`}
                             </span>
                             <span className="num-tabular font-bold">
@@ -3159,11 +2769,11 @@ export function App() {
                             <span className="bg-sky-200/80 text-sky-900 px-1.5 py-0.5 rounded font-mono">0% VAT</span>
                           </div>
                         )}
-                        <div className="px-3 py-2.5 flex justify-between bg-[#0F172A] text-white rounded-b-lg">
-                          <span className="font-extrabold">
+                        <div className="px-3 py-2.5 flex justify-between bg-slate-900 text-white rounded-b-lg">
+                          <span className="font-bold">
                             {lang === 'ar' ? 'صافي مبلغ الفاتورة:' : 'Total Invoice Amount:'}
                           </span>
-                          <span className="num-tabular font-black text-amber-400 text-sm">
+                          <span className="num-tabular font-black text-emerald-400 text-sm">
                             {formatMoney(totals.finalTotal)} {currencySymbol}
                           </span>
                         </div>
@@ -3185,7 +2795,7 @@ export function App() {
                                     : null,
                               })
                             }
-                            className="text-[11px] font-bold text-[#B45309] hover:underline"
+                            className="text-[11px] font-semibold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
                           >
                             {invoice.tafqeetManual === null
                               ? 'تعديل المبلغ بالحروف يدوياً'
@@ -3194,7 +2804,7 @@ export function App() {
                         </div>
 
                         {invoice.tafqeetManual === null ? (
-                          <div className="bg-amber-50/80 border border-amber-200 rounded-lg px-3 py-2 text-xs font-bold text-[#0F172A] leading-relaxed">
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 leading-relaxed">
                             {autoTafqeet}
                           </div>
                         ) : (
@@ -3204,7 +2814,7 @@ export function App() {
                             onChange={(e) =>
                               updateInvoice({ tafqeetManual: e.target.value })
                             }
-                            className="w-full rounded-lg border border-amber-400 bg-white px-3 py-2 text-xs font-bold text-[#0F172A] outline-none"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-teal-600"
                           />
                         )}
                       </div>
@@ -3418,9 +3028,9 @@ export function App() {
                       <button
                         type="button"
                         onClick={handleSaveAndIssueInvoice}
-                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-l from-[#0F172A] via-slate-900 to-[#0F172A] hover:from-slate-800 hover:to-slate-800 text-white font-extrabold text-sm shadow-lg border-b-[3px] border-b-[#B45309] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        className="w-full py-3 px-4 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                       >
-                        <Save className="w-4 h-4 text-amber-400" />
+                        <Save className="w-4 h-4 text-white" />
                         <span>حفظ وإصدار الفاتورة في السجل ({seller.arabicName})</span>
                       </button>
 
@@ -3428,9 +3038,9 @@ export function App() {
                         <button
                           type="button"
                           onClick={handlePrintCurrentDocument}
-                          className="py-2.5 px-3 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                          className="py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                         >
-                          <Printer className="w-3.5 h-3.5" />
+                          <Printer className="w-3.5 h-3.5 text-teal-400" />
                           <span>
                             طباعة / PDF (
                             {effectiveDocPrintView === 'invoice'
@@ -3445,9 +3055,9 @@ export function App() {
                         <button
                           type="button"
                           onClick={handleStartNewSequentialInvoice}
-                          className="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 text-[#0F172A] border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors num-tabular cursor-pointer"
+                          className="py-2.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors num-tabular cursor-pointer shadow-2xs"
                         >
-                          <FilePlus2 className="w-3.5 h-3.5 text-[#B45309]" />
+                          <FilePlus2 className="w-3.5 h-3.5 text-teal-600" />
                           <span>فاتورة جديدة فارغة</span>
                         </button>
                       </div>
@@ -3471,8 +3081,8 @@ export function App() {
               }}
               className={`hidden lg:flex w-2 cursor-col-resize transition flex-col items-center justify-center shrink-0 select-none z-20 ${
                 isDraggingSplitter
-                  ? 'bg-amber-500'
-                  : 'bg-slate-300/70 hover:bg-amber-500/50 active:bg-amber-500'
+                  ? 'bg-teal-600'
+                  : 'bg-slate-300/70 hover:bg-teal-600/50 active:bg-teal-600'
               }`}
             >
               <div className="flex flex-col gap-1 py-2">
@@ -3493,7 +3103,7 @@ export function App() {
           >
             {/* Row 2: Sub-Header above the Preview Pane (Right: SaaS Brand & Style Switcher | Left/Center: Pagination + Zoom) */}
             <div className="bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
-              {/* Right: SaaS Organization & Template Style Badges */}
+              {/* Right: SaaS Organization & Template Style Badges + Company Settings Button */}
               <div className="flex items-center gap-2 overflow-x-auto max-w-full py-0.5">
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
                   <div
@@ -3513,7 +3123,7 @@ export function App() {
                       onClick={() => handleQuickTemplateChange(t.id)}
                       className={`px-2 py-1 rounded text-[10.5px] font-bold transition-all cursor-pointer ${
                         (seller.templateStyle || 'modern') === t.id
-                          ? 'bg-[#0F172A] text-white shadow-xs'
+                          ? 'bg-slate-900 text-white shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                       }`}
                     >
@@ -3521,6 +3131,16 @@ export function App() {
                     </button>
                   ))}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('settings')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all cursor-pointer shrink-0"
+                  title={lang === 'ar' ? 'تعديل الهوية وإعدادات المنشأة' : 'Company & Tax Settings'}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                  <span>{lang === 'ar' ? 'إعدادات المنشأة والضريبة' : 'Company & Tax Settings'}</span>
+                </button>
               </div>
 
               {/* Left/Center: Page Navigation (السابق | صفحة X من Y | التالي) + Zoom Controls (100% | ملائمة) */}
@@ -3535,7 +3155,7 @@ export function App() {
                           onClick={() =>
                             setCurrentPage((prev) => Math.max(1, prev - 1))
                           }
-                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
                         >
                           <ChevronRight className="w-3.5 h-3.5" />
                           <span>السابق</span>
@@ -3553,7 +3173,7 @@ export function App() {
                               Math.min(totalPages, prev + 1)
                             )
                           }
-                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-amber-50 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 disabled:opacity-40 disabled:pointer-events-none shadow-2xs transition-colors cursor-pointer"
                         >
                           <span>التالي</span>
                           <ChevronLeft className="w-3.5 h-3.5" />
@@ -3572,8 +3192,8 @@ export function App() {
                       }
                       className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                         previewViewMode === 'all'
-                          ? 'bg-[#B45309] text-white shadow-2xs'
-                          : 'bg-white text-[#0F172A] hover:bg-amber-50 shadow-2xs'
+                          ? 'bg-slate-900 text-white shadow-2xs'
+                          : 'bg-white text-slate-800 hover:bg-slate-100 shadow-2xs'
                       }`}
                     >
                       <Layers className="w-3.5 h-3.5" />
@@ -3699,7 +3319,7 @@ export function App() {
 
               {/* Floating Bottom Pagination Bar when invoice has multiple pages */}
               {effectiveDocPrintView !== 'receipt' && totalPages > 1 && (
-                <div className="mt-6 sticky bottom-3 z-20 bg-[#0F172A]/95 text-white border border-[#B45309] rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3">
+                <div className="mt-6 sticky bottom-3 z-20 bg-slate-900/95 text-white border border-slate-700 rounded-xl px-4 py-2 shadow-2xl flex items-center gap-3 backdrop-blur-md">
                   <button
                     type="button"
                     disabled={previewViewMode === 'all' || currentPage <= 1}
@@ -3707,13 +3327,13 @@ export function App() {
                       setPreviewViewMode('single');
                       setCurrentPage((prev) => Math.max(1, prev - 1));
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
+                    className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
                   >
-                    <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
+                    <ChevronRight className="w-3.5 h-3.5 text-teal-400" />
                     <span>السابق</span>
                   </button>
 
-                  <span className="text-xs font-extrabold text-amber-300 num-tabular">
+                  <span className="text-xs font-bold text-slate-200 num-tabular">
                     {previewViewMode === 'single'
                       ? `صفحة ${currentPage} من ${totalPages}`
                       : `معاينة متصلة (${totalPages} صفحات)`}
@@ -3728,10 +3348,10 @@ export function App() {
                       setPreviewViewMode('single');
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1));
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
+                    className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
                   >
                     <span>التالي</span>
-                    <ChevronLeft className="w-3.5 h-3.5 text-amber-400" />
+                    <ChevronLeft className="w-3.5 h-3.5 text-teal-400" />
                   </button>
                 </div>
               )}

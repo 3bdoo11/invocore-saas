@@ -137,7 +137,7 @@ export const DICTIONARY: Record<Language, Translations> = {
   ar: {
     brandName: 'InvoCore',
     brandTagline: 'منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)',
-    guestPreviewBadge: 'زائر تجريبي (⚡ Guest Preview)',
+    guestPreviewBadge: 'زائر تجريبي (معاينة سريعة)',
     proLicensedBadge: 'حساب مرخص (PRO Licensed)',
     trialBalanceBadge: 'رصيد الفواتير التجريبية',
     upgradeToPro: 'ترقية إلى PRO',
@@ -254,7 +254,7 @@ export const DICTIONARY: Record<Language, Translations> = {
   en: {
     brandName: 'InvoCore',
     brandTagline: 'Smart B2B E-Invoicing & Revenue Operations Platform',
-    guestPreviewBadge: 'Guest Preview (⚡ Demo Sandbox)',
+    guestPreviewBadge: 'Guest Preview Mode',
     proLicensedBadge: 'PRO Licensed Account',
     trialBalanceBadge: 'Trial Invoices Left',
     upgradeToPro: 'Upgrade to PRO',

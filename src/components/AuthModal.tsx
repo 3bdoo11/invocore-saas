@@ -1200,11 +1200,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-200/80"
               title="معاينة فورية للمنصة بدون تسجيل دخول"
             >
-              <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <Eye className="w-4 h-4 text-teal-600" />
               <span>
                 {isAr
-                  ? '⚡ معاينة سريعة كزائر (علامة مائية تجريبية)'
-                  : '⚡ Quick Guest Preview (Watermarked Demo)'}
+                  ? 'معاينة سريعة كزائر (علامة مائية تجريبية)'
+                  : 'Quick Guest Preview (Watermarked Demo)'}
               </span>
             </button>
           </div>

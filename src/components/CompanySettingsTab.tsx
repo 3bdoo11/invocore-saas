@@ -179,8 +179,8 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   type="text"
                   value={seller.arabicName}
                   onChange={(e) => onUpdateSeller({ ...seller, arabicName: e.target.value })}
-                  placeholder="مثال: شركة نوفاكور للتقنية الذكية"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="مثال: شركة إنفو كور للحلول الذكية"
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
 
@@ -193,8 +193,8 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   dir="ltr"
                   value={seller.englishName}
                   onChange={(e) => onUpdateSeller({ ...seller, englishName: e.target.value })}
-                  placeholder="e.g. NovaCore Technologies Ltd."
-                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
+                  placeholder="e.g. InvoCore Technologies Ltd."
+                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
 
@@ -209,7 +209,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                     value={seller.crNumber}
                     onChange={(e) => onUpdateSeller({ ...seller, crNumber: e.target.value })}
                     placeholder={getMarketConfig(seller.jurisdiction).crNumberPlaceholder}
-                    className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
+                    className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                   />
                 </div>
 
@@ -223,7 +223,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                     value={seller.taxNumber}
                     onChange={(e) => onUpdateSeller({ ...seller, taxNumber: e.target.value })}
                     placeholder={getMarketConfig(seller.jurisdiction).taxNumberPlaceholder}
-                    className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
+                    className="w-full text-xs font-black text-right num-tabular border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                   />
                 </div>
               </div>
@@ -237,7 +237,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   value={seller.address}
                   onChange={(e) => onUpdateSeller({ ...seller, address: e.target.value })}
                   placeholder="المملكة العربية السعودية - الرياض - حي الملقا"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-amber-500"
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2.5 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
             </div>
@@ -262,7 +262,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   value={seller.phone || ''}
                   onChange={(e) => onUpdateSeller({ ...seller, phone: e.target.value })}
                   placeholder="05XXXXXXXX"
-                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-amber-500"
+                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
 
@@ -276,8 +276,8 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   dir="ltr"
                   value={seller.email || ''}
                   onChange={(e) => onUpdateSeller({ ...seller, email: e.target.value })}
-                  placeholder="contact@novacore.io"
-                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-amber-500"
+                  placeholder="contact@invocore.io"
+                  className="w-full text-xs font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
             </div>
@@ -293,7 +293,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   value={seller.bankName || ''}
                   onChange={(e) => onUpdateSeller({ ...seller, bankName: e.target.value })}
                   placeholder="البنك الأهلي السعودي (SNB)"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-amber-500"
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
 
@@ -307,7 +307,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
                   value={seller.iban || ''}
                   onChange={(e) => onUpdateSeller({ ...seller, iban: e.target.value })}
                   placeholder="SAXXXXXXXXXXXXXXXXXXXXXXXX"
-                  className="w-full text-xs font-mono font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-amber-500"
+                  className="w-full text-xs font-mono font-bold text-right border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 />
               </div>
             </div>
@@ -330,8 +330,8 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
             )}
 
             {isProcessingLogo ? (
-              <div className="border-2 border-dashed border-amber-400 bg-amber-50/50 rounded-xl p-6 text-center space-y-2">
-                <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto" />
+              <div className="border-2 border-dashed border-teal-400 bg-teal-50/50 rounded-xl p-6 text-center space-y-2">
+                <RefreshCw className="w-6 h-6 text-teal-600 animate-spin mx-auto" />
                 <div className="text-xs font-bold text-slate-700">جاري ضغط وتحسين الشعار...</div>
               </div>
             ) : seller.logoDataUrl ? (
@@ -364,7 +364,7 @@ export const CompanySettingsTab: React.FC<CompanySettingsTabProps> = ({
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 hover:border-amber-500 hover:bg-amber-50/30 rounded-xl p-5 text-center cursor-pointer transition-all space-y-2"
+                className="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-xl p-5 text-center cursor-pointer transition-all space-y-2"
               >
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-500">
                   <Upload className="w-5 h-5" />

@@ -229,15 +229,15 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
   return (
     <div className="space-y-4">
       {/* Header Banner */}
-      <div className="bg-gradient-to-l from-[#0F172A] to-slate-800 text-white rounded-xl p-4 shadow-sm border-r-4 border-r-[#B45309]">
+      <div className="bg-gradient-to-l from-slate-900 to-slate-800 text-white rounded-xl p-4 shadow-sm border-r-4 border-r-teal-600">
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-amber-400" />
+            <FileSpreadsheet className="w-5 h-5 text-teal-400" />
             <h3 className="text-sm font-extrabold">
               قاعدة بيانات الأصناف والوحدات والأسعار (6 أعمدة - Excel)
             </h3>
           </div>
-          <span className="num-tabular text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-amber-300">
+          <span className="num-tabular text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-teal-300">
             {catalog.length} صنف محفوظ
           </span>
         </div>
@@ -277,7 +277,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
           <button
             type="button"
             onClick={downloadEmptyCatalogTemplate}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B45309] hover:underline cursor-pointer"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-800 hover:underline cursor-pointer"
           >
             <FileDown className="w-3.5 h-3.5" />
             <span>تحميل قالب فارغ (6 أعمدة)</span>
@@ -348,7 +348,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="اسم الصنف أو البيان (مثال: تطوير وربط البنية السحابية / Cloud Infrastructure & API...)"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none"
           />
 
           <div className="grid grid-cols-12 gap-2">
@@ -377,7 +377,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
                 value={newQty}
                 onChange={(e) => setNewQty(e.target.value)}
                 placeholder="1"
-                className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-center num-tabular focus:border-[#B45309] outline-none"
+                className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-center num-tabular focus:border-teal-600 outline-none"
               />
             </div>
 
@@ -393,14 +393,14 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-[#B45309] outline-none"
+                className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-right num-tabular focus:border-teal-600 outline-none"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full inline-flex items-center justify-center gap-1.5 bg-[#B45309] hover:bg-[#92400E] text-white font-extrabold text-xs px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            className="w-full inline-flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs px-4 py-2 rounded-lg transition-colors cursor-pointer shadow-2xs"
           >
             <Plus className="w-4 h-4" />
             <span>حفظ الصنف في قاعدة البيانات</span>
@@ -418,7 +418,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="بحث في الأصناف أو الوحدات..."
-                className="w-full rounded-lg border border-slate-300 bg-white pr-3 pl-8 py-1.5 text-xs font-semibold focus:border-[#B45309] outline-none"
+                className="w-full rounded-lg border border-slate-300 bg-white pr-3 pl-8 py-1.5 text-xs font-semibold focus:border-teal-600 outline-none"
               />
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -442,7 +442,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
               className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 hover:text-[#0F172A] cursor-pointer"
             >
               {isAllFilteredSelected ? (
-                <CheckSquare className="w-4 h-4 text-[#B45309]" />
+                <CheckSquare className="w-4 h-4 text-teal-600" />
               ) : (
                 <Square className="w-4 h-4 text-slate-400" />
               )}
@@ -567,7 +567,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelectOne(item.id)}
-                          className="w-3.5 h-3.5 accent-[#B45309] rounded cursor-pointer"
+                          className="w-3.5 h-3.5 accent-teal-600 rounded cursor-pointer"
                         />
                         <span className="num-tabular text-[10.5px] font-extrabold text-slate-500">
                           {idx + 1}
@@ -600,7 +600,7 @@ export const CatalogManagerTab: React.FC<CatalogManagerTabProps> = ({
                       </div>
 
                       {/* Col 6: Line Total before VAT */}
-                      <div className="col-span-2 text-center num-tabular font-extrabold text-[#B45309]">
+                      <div className="col-span-2 text-center num-tabular font-extrabold text-teal-700">
                         {formatMoney(lineTotal)}
                       </div>
 

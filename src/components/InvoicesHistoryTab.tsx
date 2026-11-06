@@ -76,20 +76,20 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
   return (
     <div className="space-y-4">
       {/* Summary KPI Header */}
-      <div className="bg-gradient-to-l from-[#0F172A] to-slate-800 text-white rounded-xl p-4 shadow-sm border-r-4 border-r-[#B45309] space-y-3">
+      <div className="bg-gradient-to-l from-slate-900 to-slate-800 text-white rounded-xl p-4 shadow-sm border-r-4 border-r-teal-600 space-y-3">
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-amber-400" />
+              <FileText className="w-5 h-5 text-teal-400" />
               <h3 className="text-sm font-extrabold">الأرشيف وسجل الفواتير</h3>
             </div>
-            <span className="num-tabular text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-amber-300">
+            <span className="num-tabular text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-teal-300">
               {invoices.length} فاتورة
             </span>
           </div>
           <div className="flex items-center justify-between text-xs pt-1.5 border-t border-white/10">
             <span className="text-slate-300">إجمالي الفواتير المصدرة:</span>
-            <span className="num-tabular font-extrabold text-amber-400">
+            <span className="num-tabular font-extrabold text-emerald-400">
               {formatMoney(totalVolume)} ر.س
             </span>
           </div>
@@ -108,7 +108,7 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
           }}
           className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:pointer-events-none text-white font-extrabold text-xs py-2.5 px-4 rounded-lg shadow-sm transition-colors cursor-pointer"
         >
-          <FileSpreadsheet className="w-4 h-4 text-amber-300" />
+          <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
           <span>تصدير سجل الفواتير إلى إكسل (.xlsx)</span>
           <Download className="w-3.5 h-3.5 mr-auto opacity-80" />
         </button>
@@ -121,7 +121,7 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ابحث برقم الفاتورة (#112463) أو اسم العميل..."
-          className="w-full rounded-xl border border-slate-300 bg-white pr-3.5 pl-9 py-2.5 text-xs font-semibold focus:border-[#B45309] focus:ring-2 focus:ring-amber-500/20 outline-none shadow-sm"
+          className="w-full rounded-xl border border-slate-300 bg-white pr-3.5 pl-9 py-2.5 text-xs font-semibold focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 outline-none shadow-sm"
         />
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
       </div>
@@ -146,7 +146,7 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
                 key={inv.id}
                 className={`bg-white border rounded-xl p-3.5 transition-all shadow-sm ${
                   isSelected
-                    ? 'border-[#B45309] ring-2 ring-amber-500/15'
+                    ? 'border-teal-600 ring-2 ring-teal-500/15'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
@@ -194,7 +194,7 @@ export const InvoicesHistoryTab: React.FC<InvoicesHistoryTabProps> = ({
                       onClick={() => onSelectInvoice(inv)}
                       className="inline-flex items-center gap-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1.5 rounded-lg transition-colors"
                     >
-                      <FolderOpen className="w-3.5 h-3.5 text-[#B45309]" />
+                      <FolderOpen className="w-3.5 h-3.5 text-teal-600" />
                       <span>عرض / تعديل</span>
                     </button>
 
