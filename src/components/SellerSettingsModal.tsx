@@ -8,6 +8,7 @@ interface SellerSettingsModalProps {
   onUpdateSeller: (updated: SellerInfo) => void;
   onSave: () => void;
   onClose: () => void;
+  lang?: 'ar' | 'en';
 }
 
 export const SellerSettingsModal: React.FC<SellerSettingsModalProps> = ({
@@ -15,7 +16,9 @@ export const SellerSettingsModal: React.FC<SellerSettingsModalProps> = ({
   onUpdateSeller,
   onSave,
   onClose,
+  lang = 'ar',
 }) => {
+  const isAr = lang === 'ar';
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -28,7 +31,7 @@ export const SellerSettingsModal: React.FC<SellerSettingsModalProps> = ({
 
   return (
     <div
-      dir="rtl"
+      dir={isAr ? 'rtl' : 'ltr'}
       className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -38,7 +41,9 @@ export const SellerSettingsModal: React.FC<SellerSettingsModalProps> = ({
     >
       <div className="relative w-full max-w-4xl bg-slate-100 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-[#0F172A] text-white p-4 flex items-center justify-between shrink-0">
-          <h3 className="text-sm font-black">إعدادات المنشأة والهوية المعتمدة</h3>
+          <h3 className="text-sm font-black">
+            {isAr ? 'إعدادات المنشأة والهوية المعتمدة' : 'Company Settings & Official Brand Identity'}
+          </h3>
           <button
             type="button"
             onClick={onClose}
@@ -55,6 +60,7 @@ export const SellerSettingsModal: React.FC<SellerSettingsModalProps> = ({
               onSave();
               onClose();
             }}
+            lang={lang}
           />
         </div>
       </div>

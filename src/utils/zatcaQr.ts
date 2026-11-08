@@ -11,6 +11,7 @@ import {
   PaymentMethod,
   QrEncodingMode,
   SellerInfo,
+  TaxJurisdiction,
   TemplateStyle,
 } from '../types/invoice';
 import { deflateSync, inflateSync } from 'fflate';
@@ -207,11 +208,14 @@ function bytesToBase64Url(bytes: Uint8Array): string {
 
 export function encodePublicInvoiceUrl(
   invoice: InvoiceData,
-  seller: SellerInfo
+  seller: SellerInfo,
+  lang?: 'ar' | 'en'
 ): string {
   const pmIndex = Math.max(0, PAYMENT_METHODS.indexOf(invoice.paymentMethod));
   const styleIdx =
     seller.templateStyle === 'classic' ? 1 : seller.templateStyle === 'minimalist' ? 2 : 0;
+  const activeJurisdiction = invoice.jurisdiction || seller.jurisdiction || 'KSA';
+  const activeLang = lang || (activeJurisdiction === 'USA' || activeJurisdiction === 'EU' ? 'en' : 'ar');
 
   // Build deduplicated description string table
   const counts = new Map<string, number>();
@@ -257,6 +261,10 @@ export function encodePublicInvoiceUrl(
     extras.tf = invoice.tafqeetManual;
   if (invoice.qrMode && invoice.qrMode !== 'web') extras.q = invoice.qrMode;
 
+  // Preserve jurisdiction and language in payload
+  extras.jur = activeJurisdiction;
+  extras.lng = activeLang;
+
   const s: Record<string, string> = {
     a: seller.arabicName || '',
     e: seller.englishName || '',
@@ -265,6 +273,7 @@ export function encodePublicInvoiceUrl(
     ad: seller.address || '',
     col: seller.primaryColor || '#0F172A',
     tpl: seller.templateStyle || 'modern',
+    jur: activeJurisdiction,
   };
   if (seller.phone) s.ph = seller.phone;
   if (seller.email) s.em = seller.email;
@@ -310,7 +319,7 @@ export function encodePublicInvoiceUrl(
 
 function decodeCompressedInvoice(
   encoded: string
-): { invoice: InvoiceData; seller: SellerInfo } | null {
+): { invoice: InvoiceData; seller: SellerInfo; lang?: 'ar' | 'en' } | null {
   const bytes = inflateSync(base64ToUint8Array(encoded));
   const p = JSON.parse(new TextDecoder('utf-8').decode(bytes)) as unknown[];
   const [
@@ -343,6 +352,10 @@ function decodeCompressedInvoice(
   const styleFromIdx: TemplateStyle =
     Number(cIdx) === 1 ? 'classic' : Number(cIdx) === 2 ? 'minimalist' : 'modern';
 
+  const decodedJurisdiction = (extras.jur as TaxJurisdiction) || (sOv.jur as TaxJurisdiction) || 'KSA';
+  const decodedLang = (extras.lng as 'ar' | 'en') || (decodedJurisdiction === 'USA' || decodedJurisdiction === 'EU' ? 'en' : 'ar');
+  const tplStyle: TemplateStyle = (sOv.tpl as TemplateStyle) || styleFromIdx;
+
   const seller: SellerInfo = {
     arabicName: sOv.a || DEFAULT_SELLER_INFO.arabicName,
     englishName: sOv.e || DEFAULT_SELLER_INFO.englishName,
@@ -355,8 +368,9 @@ function decodeCompressedInvoice(
     iban: sOv.ib,
     bankName: sOv.bk,
     primaryColor: sOv.col || '#0F172A',
-    templateStyle: (sOv.tpl as TemplateStyle) || styleFromIdx,
+    templateStyle: tplStyle,
     logoDataUrl: sOv.lg,
+    jurisdiction: decodedJurisdiction,
   };
   const dict = Array.isArray(dictRaw) ? dictRaw : [];
   const resolveDesc = (ref: unknown): string => {
@@ -403,15 +417,16 @@ function decodeCompressedInvoice(
     paidAmount: Number(paidAmt) || 0,
     tafqeetManual: (extras.tf as string) ?? null,
     qrMode: ((extras.q as QrEncodingMode) || 'web') as QrEncodingMode,
+    jurisdiction: decodedJurisdiction,
     status: 'issued',
   };
-  return { invoice, seller };
+  return { invoice, seller, lang: decodedLang };
 }
 
 
 export function decodePublicInvoiceParam(
   rawParam: string
-): { invoice: InvoiceData; seller: SellerInfo } | null {
+): { invoice: InvoiceData; seller: SellerInfo; lang?: 'ar' | 'en' } | null {
   try {
     const cleaned = decodeURIComponent(rawParam.trim());
     if (cleaned.startsWith('Z')) {

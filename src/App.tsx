@@ -149,8 +149,8 @@ type MobilePane = 'controls' | 'preview';
 type DesktopLayoutMode = 'split' | 'input' | 'preview';
 
 const A4_PIXEL_WIDTH = 794;
-const DEFAULT_PANEL_WIDTH = 480;
-const MIN_PANEL_WIDTH = 340;
+const DEFAULT_PANEL_WIDTH = 540;
+const MIN_PANEL_WIDTH = 380;
 
 export function App() {
   // 1. Check URL Query Parameter or Route Path for Public Client PDF View Mode (/v/... or ?invoice=...)
@@ -476,7 +476,7 @@ export function App() {
         localStorage.getItem('invocore_panel_width') ||
           localStorage.getItem('saqr_panel_width')
       );
-      if (Number.isFinite(saved) && saved >= MIN_PANEL_WIDTH && saved <= 1400) {
+      if (Number.isFinite(saved) && saved >= 440 && saved <= 1400) {
         return saved;
       }
     } catch {
@@ -700,8 +700,8 @@ export function App() {
   );
 
   const publicShareUrl = useMemo(
-    () => encodePublicInvoiceUrl(invoice, seller),
-    [invoice, seller]
+    () => encodePublicInvoiceUrl(invoice, seller, lang),
+    [invoice, seller, lang]
   );
 
   // If URL is in Public Client PDF View Mode (?invoice=...), render ONLY the Client PDF Viewer
@@ -1622,39 +1622,42 @@ export function App() {
 
               {/* Divider + Desktop View Mode Switcher */}
               <div className="hidden xl:block w-[1px] h-5 bg-slate-800 mx-0.5" />
-              <div className="hidden xl:inline-flex items-center gap-1">
+              <div className="hidden xl:inline-flex items-center gap-1 bg-slate-900/60 p-0.5 rounded-lg border border-slate-800">
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('split')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     desktopLayoutMode === 'split'
-                      ? 'bg-slate-800 text-white border border-slate-700'
+                      ? 'bg-slate-800 text-teal-400 border border-slate-700 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
+                  title={lang === 'ar' ? 'عرض متزامن لنموذج الإدخال ومعاينة الفاتورة' : 'Split View: Form & Live Preview'}
                 >
-                  {lang === 'ar' ? 'تقسيم' : 'Split'}
+                  {lang === 'ar' ? 'تقسيم الشاشة' : 'Split View'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('input')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     desktopLayoutMode === 'input'
-                      ? 'bg-slate-800 text-white border border-slate-700'
+                      ? 'bg-slate-800 text-teal-400 border border-slate-700 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
+                  title={lang === 'ar' ? 'عرض نموذج البيانات فقط بملء الشاشة' : 'Form Only View'}
                 >
-                  {lang === 'ar' ? 'الإدخال' : 'Input'}
+                  {lang === 'ar' ? 'البيانات' : 'Form Only'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('preview')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     desktopLayoutMode === 'preview'
-                      ? 'bg-slate-800 text-white border border-slate-700'
+                      ? 'bg-slate-800 text-teal-400 border border-slate-700 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
+                  title={lang === 'ar' ? 'معاينة الفاتورة فقط بالمنتصف' : 'Preview Only View'}
                 >
-                  {lang === 'ar' ? 'المعاينة' : 'Preview'}
+                  {lang === 'ar' ? 'الفاتورة' : 'Preview Only'}
                 </button>
               </div>
             </div>
@@ -1765,7 +1768,7 @@ export function App() {
             {/* Desktop Quick Width Presets & Mode Bar */}
             <div className="hidden lg:flex items-center justify-between px-4 py-1.5 bg-slate-100 border-b border-slate-200 text-[11px]">
               <div className="flex items-center gap-1.5 text-slate-600 font-bold">
-                <span>حجم لوحة الإدخال:</span>
+                <span>{lang === 'ar' ? 'عرض لوحة الإدخال:' : 'Form Width:'}</span>
                 {desktopLayoutMode === 'split' && (
                   <span className="num-tabular text-[10.5px] text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
                     {Math.round(panelWidth)}px
@@ -1779,14 +1782,14 @@ export function App() {
                     setDesktopLayoutMode('split');
                     setPanelWidth(DEFAULT_PANEL_WIDTH);
                   }}
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors ${
+                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
                     desktopLayoutMode === 'split' &&
-                    Math.abs(panelWidth - DEFAULT_PANEL_WIDTH) < 40
-                      ? 'bg-[#0F172A] text-amber-400'
+                    Math.abs(panelWidth - DEFAULT_PANEL_WIDTH) < 20
+                      ? 'bg-slate-900 text-teal-400'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
-                  عادي
+                  {lang === 'ar' ? 'قياسي (540px)' : 'Standard (540px)'}
                 </button>
                 <button
                   type="button"
@@ -1799,14 +1802,14 @@ export function App() {
                       )
                     );
                   }}
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors ${
+                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
                     desktopLayoutMode === 'split' &&
-                    Math.abs(panelWidth - window.innerWidth * 0.5) <= 40
-                      ? 'bg-[#0F172A] text-amber-400'
+                    Math.abs(panelWidth - window.innerWidth * 0.5) <= 20
+                      ? 'bg-slate-900 text-teal-400'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
-                  واسع 50%
+                  {lang === 'ar' ? 'واسع 50%' : 'Wide 50%'}
                 </button>
                 <button
                   type="button"
@@ -1815,15 +1818,15 @@ export function App() {
                       prev === 'input' ? 'split' : 'input'
                     )
                   }
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors ${
+                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
                     desktopLayoutMode === 'input'
                       ? 'bg-slate-900 text-white'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
                   {desktopLayoutMode === 'input'
-                    ? 'العودة لتقسيم الشاشة'
-                    : 'ملء الشاشة'}
+                    ? (lang === 'ar' ? 'العودة لتقسيم الشاشة' : 'Exit Fullscreen')
+                    : (lang === 'ar' ? 'ملء الشاشة' : 'Fullscreen')}
                 </button>
               </div>
             </div>
@@ -1832,13 +1835,13 @@ export function App() {
             <div className="p-2 lg:p-2.5 bg-slate-50 border-b border-slate-200 shrink-0 w-full max-w-full">
               <div
                 className={`grid grid-cols-4 w-full gap-1.5 ${
-                  desktopLayoutMode === 'input' ? 'max-w-4xl mx-auto' : ''
+                  desktopLayoutMode === 'input' ? 'max-w-5xl mx-auto' : ''
                 }`}
               >
                 <button
                   type="button"
                   onClick={() => setActiveTab('editor')}
-                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'editor'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1851,7 +1854,7 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('catalog')}
-                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'catalog'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1867,7 +1870,7 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('history')}
-                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'history'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1883,7 +1886,7 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('settings')}
-                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'settings'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -1896,11 +1899,13 @@ export function App() {
             </div>
 
             {/* Scrollable Tab Content */}
-            <div className="flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden p-3 lg:p-4">
+            <div className={`flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden p-3 lg:p-4 ${
+              desktopLayoutMode === 'input' ? 'bg-slate-100/70' : ''
+            }`}>
               <div
                 className={`space-y-5 ${
                   desktopLayoutMode === 'input'
-                    ? 'max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200/90'
+                    ? 'max-w-5xl w-full mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200/90'
                     : ''
                 }`}
               >
@@ -1912,8 +1917,9 @@ export function App() {
                     }}
                     onSave={() => {
                       saveSellerToStorage(seller);
-                      showToast('تم حفظ بيانات المنشأة والشعار والنمط بنجاح');
+                      showToast(lang === 'ar' ? 'تم حفظ بيانات المنشأة والشعار والنمط بنجاح' : 'Company settings, logo and style saved successfully');
                     }}
+                    lang={lang}
                   />
                 )}
                 {activeTab === 'catalog' && (
@@ -3374,9 +3380,10 @@ export function App() {
             onUpdateSeller={(updated: SellerInfo) => setSeller(updated)}
             onSave={() => {
               saveSellerToStorage(seller);
-              showToast('تم حفظ إعدادات وهوية المنشأة بنجاح');
+              showToast(lang === 'ar' ? 'تم حفظ إعدادات وهوية المنشأة بنجاح' : 'Company settings saved successfully');
             }}
             onClose={() => setIsSellerModalOpen(false)}
+            lang={lang}
           />
         )}
 

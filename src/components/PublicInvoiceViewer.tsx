@@ -19,7 +19,7 @@ import { encodePublicInvoiceUrl } from '../utils/zatcaQr';
 import { UniversalInvoice } from './UniversalInvoice';
 
 interface PublicInvoiceViewerProps {
-  decodedData: { invoice: InvoiceData; seller: SellerInfo } | null;
+  decodedData: { invoice: InvoiceData; seller: SellerInfo; lang?: 'ar' | 'en' } | null;
 }
 
 const A4_WIDTH_PX = 794; // 210mm at 96dpi
@@ -99,6 +99,9 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
   }
 
   const { invoice, seller } = decodedData;
+  const lang: 'ar' | 'en' =
+    decodedData.lang ||
+    (invoice.jurisdiction === 'USA' || invoice.jurisdiction === 'EU' ? 'en' : 'ar');
 
   return (
     <>
@@ -230,6 +233,7 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
               activePage={activePage}
               viewMode={viewMode}
               renderAllPages={false}
+              lang={lang}
             />
           </div>
         </main>
@@ -255,6 +259,7 @@ export const PublicInvoiceViewer: React.FC<PublicInvoiceViewerProps> = ({
           invoice={invoice}
           seller={seller}
           renderAllPages={true}
+          lang={lang}
         />
       </div>
     </>

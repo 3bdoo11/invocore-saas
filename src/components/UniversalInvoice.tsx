@@ -63,7 +63,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
 
   const zatcaQrBase64 = useMemo(() => {
     return generateZatcaQrBase64({
-      sellerName: seller.arabicName || seller.englishName || 'NovaCore Technologies',
+      sellerName: seller.arabicName || seller.englishName || 'InvoCore Technologies',
       vatNumber: seller.taxNumber || '310987654300003',
       date: invoice.date,
       time: invoice.time,
@@ -73,8 +73,8 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
   }, [seller, invoice, totals]);
 
   const publicUrl = useMemo(() => {
-    return encodePublicInvoiceUrl(invoice, seller);
-  }, [invoice, seller]);
+    return encodePublicInvoiceUrl(invoice, seller, lang);
+  }, [invoice, seller, lang]);
 
   const primaryColor = seller.primaryColor || '#0F172A';
   const templateStyle = seller.templateStyle || 'modern';
@@ -91,244 +91,662 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
         const totalPagesCount = pages.length;
         const isLastPage = actualPageNo === totalPagesCount;
 
+        // =========================================================================
+        // TEMPLATE A: EXECUTIVE MODERN
+        // =========================================================================
+        if (templateStyle === 'modern') {
+          return (
+            <div
+              key={`page-modern-${actualPageNo}`}
+              dir={isAr ? 'rtl' : 'ltr'}
+              style={{
+                fontFamily: seller.fontFamily || (isAr ? "'Tajawal', 'Cairo', sans-serif" : "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"),
+              }}
+              className="invoice-a4-page bg-white text-slate-900 shadow-2xl print:shadow-none mx-auto relative flex flex-col justify-between box-border rounded-2xl overflow-hidden border border-slate-200"
+            >
+              {isWatermarked && <TrialWatermark />}
+
+              <div>
+                {/* 1. Full-Bleed Solid Brand Banner */}
+                <header
+                  style={{ backgroundColor: primaryColor }}
+                  className="p-6 text-white relative overflow-hidden"
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
+                    {/* Left/Right: Logo in crisp white badge + Seller details */}
+                    <div className="flex items-center gap-3.5">
+                      <div className="bg-white rounded-xl p-2.5 shadow-md flex items-center justify-center min-w-[70px] min-h-[50px] shrink-0">
+                        {seller.logoDataUrl ? (
+                          <img
+                            src={seller.logoDataUrl}
+                            alt="Logo"
+                            className="max-h-12 max-w-32 object-contain"
+                          />
+                        ) : (
+                          <InvoCoreLogo size={40} variant="dark" />
+                        )}
+                      </div>
+                      <div>
+                        <h1 className="text-lg font-black text-white leading-tight">
+                          {isAr
+                            ? (seller.arabicName || 'منصة InvoCore')
+                            : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
+                        </h1>
+                        {seller.englishName && isAr && (
+                          <div className="text-[11px] font-bold text-white/80 tracking-wide mt-0.5">
+                            {seller.englishName}
+                          </div>
+                        )}
+                        {seller.arabicName && !isAr && (
+                          <div className="text-[11px] font-bold text-white/80 tracking-wide mt-0.5">
+                            {seller.arabicName}
+                          </div>
+                        )}
+                        <div className="text-[10px] font-medium text-white/85 mt-1 flex flex-wrap gap-2.5 num-tabular">
+                          {seller.crNumber && (
+                            <span>{isAr ? `${market.crNumberLabelAr}:` : `${market.crNumberLabelEn}:`} <strong className="text-white">{seller.crNumber}</strong></span>
+                          )}
+                          {seller.taxNumber && (
+                            <span>{isAr ? `${market.taxNumberLabelAr}:` : `${market.taxNumberLabelEn}:`} <strong className="text-white">{seller.taxNumber}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Floating Glass Summary Strip */}
+                    <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl p-3 text-white flex flex-col items-start sm:items-end gap-1 shrink-0 min-w-[190px]">
+                      <div className="text-[12px] font-black uppercase tracking-wider">
+                        {isAr ? market.invoiceTitleAr : market.invoiceTitleEn}
+                      </div>
+                      <div className="text-[10px] text-white/80 uppercase font-semibold">
+                        {isAr ? market.authorityNameAr : market.authorityNameEn}
+                      </div>
+                      <div className="w-full h-[1px] bg-white/20 my-1" />
+                      <div className="text-[11px] font-bold text-white flex justify-between w-full num-tabular">
+                        <span>{isAr ? 'رقم الفاتورة:' : 'Invoice No:'}</span>
+                        <span className="font-black text-amber-300">#{invoice.invoiceNumber}</span>
+                      </div>
+                      <div className="text-[10.5px] text-white/90 flex justify-between w-full num-tabular">
+                        <span>{isAr ? 'التاريخ:' : 'Date:'}</span>
+                        <span>{invoice.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                </header>
+
+                <div className="p-6 space-y-5">
+                  {/* 2. Modern Card-Based Seller vs Buyer Boxes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 text-xs">
+                    {/* Buyer / Customer Card */}
+                    <div className="sm:col-span-8 bg-slate-50/80 border border-slate-200/90 rounded-xl p-3.5 space-y-1">
+                      <div style={{ color: primaryColor }} className="text-[10.5px] font-black uppercase tracking-wider border-b border-slate-200/80 pb-1">
+                        {isAr ? 'فاتورة إلى (Billed To / Customer)' : 'Billed To (Customer Details)'}
+                      </div>
+                      <div className="text-sm font-black text-slate-900 pt-0.5">
+                        {invoice.client.name || (isAr ? 'عميل نقدي' : 'Cash Client')}
+                      </div>
+                      <div className="text-[11px] font-bold text-slate-600 num-tabular">
+                        {isAr ? `${market.taxNumberLabelAr}:` : `${market.taxNumberLabelEn}:`} <span className="text-slate-900">{invoice.client.taxNumber || (isAr ? 'غير مسجل' : 'N/A')}</span>
+                      </div>
+                      {invoice.client.address && (
+                        <div className="text-[10.5px] text-slate-500 font-medium">{invoice.client.address}</div>
+                      )}
+                      {invoice.client.notes && (
+                        <div className="text-[10px] text-slate-600 pt-0.5">
+                          <strong>{isAr ? 'ملاحظات:' : 'Notes:'}</strong> {invoice.client.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Invoice Specifics Card */}
+                    <div className="sm:col-span-4 bg-slate-50/80 border border-slate-200/90 rounded-xl p-3.5 space-y-1 flex flex-col justify-between">
+                      <div className="text-[10.5px] font-black text-slate-700 uppercase tracking-wider border-b border-slate-200/80 pb-1">
+                        {isAr ? 'بيانات الإصدار' : 'Invoice Specifics'}
+                      </div>
+                      <div className="text-[11px] font-bold text-slate-700 flex justify-between items-center">
+                        <span>{isAr ? 'طريقة الدفع:' : 'Payment:'}</span>
+                        <span
+                          style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-black"
+                        >
+                          {invoice.paymentMethod === 'آجل' && !isAr ? 'Credit' : invoice.paymentMethod === 'نقدي' && !isAr ? 'Cash' : invoice.paymentMethod === 'تحويل بنكي' && !isAr ? 'Wire Transfer' : invoice.paymentMethod === 'شبكة' && !isAr ? 'POS' : invoice.paymentMethod}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-bold text-slate-700 flex justify-between items-center num-tabular">
+                        <span>{isAr ? 'الوقت:' : 'Time:'}</span>
+                        <span className="font-semibold text-slate-900">{invoice.time}</span>
+                      </div>
+                      <div className="text-[11px] font-bold text-slate-700 flex justify-between items-center num-tabular">
+                        <span>{isAr ? 'الصفحة:' : 'Page:'}</span>
+                        <span className="font-black text-slate-900">{actualPageNo} / {totalPagesCount}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Sleek Borderless Table with Brand Header Bar */}
+                  <div className="rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+                    <table className="w-full text-xs text-center border-collapse">
+                      <thead>
+                        <tr style={{ backgroundColor: primaryColor }} className="text-white text-[11px] font-bold">
+                          <th className="py-2.5 px-2 w-10">#</th>
+                          <th className={`py-2.5 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
+                            {isAr ? 'البيان / الوصف (Description)' : 'Item Description / Service'}
+                          </th>
+                          <th className="py-2.5 px-2 w-16">{isAr ? 'الوحدة' : 'Unit'}</th>
+                          <th className="py-2.5 px-2 w-16">{isAr ? 'الكمية' : 'Qty'}</th>
+                          <th className="py-2.5 px-2 w-20">{isAr ? 'سعر الوحدة' : 'Unit Price'}</th>
+                          <th className="py-2.5 px-2 w-16">{isAr ? market.taxShortLabelAr : market.taxShortLabelEn}</th>
+                          <th className="py-2.5 px-2 w-24">
+                            {isAr ? `الإجمالي (${currencySymbol})` : `Total (${currencySymbol})`}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
+                        {pageData.items.map((item, idx) => {
+                          const rowNo = pageData.startIndex + idx + 1;
+                          const lineSubtotal = (Number(item.qty) || 0) * (Number(item.unitPrice) || 0);
+                          const lineVatRate = invoice.isReverseCharge ? 0 : (invoice.vatRate ?? market.defaultVatRate);
+                          const vatAmount = lineSubtotal * (lineVatRate / 100);
+                          const lineTotal = lineSubtotal + vatAmount;
+
+                          return (
+                            <tr key={item.id || idx} className="even:bg-slate-50/70 hover:bg-slate-100/50 transition-colors">
+                              <td className="py-3 px-1 num-tabular font-bold text-slate-500">{rowNo}</td>
+                              <td className={`py-3 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
+                                <div className="font-extrabold text-slate-900 text-[12.5px]">{item.description}</div>
+                                {item.itemCode && (
+                                  <div className="text-[9.5px] text-slate-400 num-tabular">SKU: {item.itemCode}</div>
+                                )}
+                              </td>
+                              <td className="py-3 px-1.5 text-slate-600 font-medium">{item.unit || (isAr ? 'وحدة' : 'Unit')}</td>
+                              <td className="py-3 px-1.5 num-tabular font-extrabold">{formatQty(item.qty)}</td>
+                              <td className="py-3 px-1.5 num-tabular font-bold">{formatMoney(item.unitPrice)}</td>
+                              <td className="py-3 px-1.5 num-tabular text-slate-500">{lineVatRate}%</td>
+                              <td className="py-3 px-2 num-tabular font-black text-slate-950">{formatMoney(lineTotal)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 4. Financial Totals & Grand Total Block */}
+                  {isLastPage ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end pt-2">
+                      <div className="sm:col-span-7 space-y-2.5">
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                          <div className="text-[10px] font-bold text-slate-500">
+                            {isAr ? 'المبلغ كتابةً وتفقيطاً:' : 'Amount in Words:'}
+                          </div>
+                          <div style={{ color: primaryColor }} className="text-xs font-black mt-0.5 leading-relaxed">
+                            {displayedTafqeet}
+                          </div>
+                        </div>
+
+                        {seller.iban && (
+                          <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-2.5 text-[10.5px] text-slate-600 flex justify-between num-tabular">
+                            <span>{isAr ? 'التحصيل البنكي:' : 'Bank Transfer:'} <strong>{seller.bankName || 'SNB Bank'}</strong></span>
+                            <span dir="ltr" className="font-mono font-bold">IBAN: {seller.iban}</span>
+                          </div>
+                        )}
+
+                        {totals.isReverseCharge && (
+                          <div className="bg-blue-50/90 border border-blue-200 rounded-lg p-2.5 text-[10px] font-bold text-blue-900 leading-snug">
+                            {isAr
+                              ? 'إقرار ضريبي: خاضع لآلية التكليف العكسي (المادة 196 من توجيه المجلس الأوروبي 2006/112/EC).'
+                              : 'Tax Notice: B2B Reverse Charge applies (Article 196 EU Council Directive 2006/112/EC).'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="sm:col-span-5 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-xs text-xs divide-y divide-slate-100">
+                        <div className="flex justify-between p-2.5 font-bold text-slate-700 num-tabular">
+                          <span>{isAr ? 'المجموع قبل الضريبة:' : 'Subtotal (Excl. Tax):'}</span>
+                          <span>{formatMoney(totals.subtotal)} {currencySymbol}</span>
+                        </div>
+                        {totals.totalDiscount > 0 && (
+                          <div className="flex justify-between p-2.5 font-bold text-rose-700 num-tabular">
+                            <span>{isAr ? 'إجمالي الخصم:' : 'Total Discount:'}</span>
+                            <span>-{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between p-2.5 font-bold text-slate-700 num-tabular">
+                          <span>{isAr ? `${market.taxShortLabelAr} (${totals.vatRate}%):` : `${market.taxShortLabelEn} (${totals.vatRate}%):`}</span>
+                          <span>{formatMoney(totals.vatAmount)} {currencySymbol}</span>
+                        </div>
+                        {totals.withholdingTaxAmount && totals.withholdingTaxAmount > 0 ? (
+                          <div className="flex justify-between p-2.5 font-bold text-amber-700 bg-amber-50/70 num-tabular">
+                            <span>{isAr ? `خصم أرباح تجارية (${totals.withholdingTaxRate}%):` : `Withholding Tax (-${totals.withholdingTaxRate}%):`}</span>
+                            <span>-{formatMoney(totals.withholdingTaxAmount)} {currencySymbol}</span>
+                          </div>
+                        ) : null}
+                        <div
+                          style={{ backgroundColor: primaryColor }}
+                          className="flex justify-between p-3.5 font-black text-white text-sm num-tabular"
+                        >
+                          <span>{isAr ? 'الصافي الإجمالي المستحق:' : 'Total Due:'}</span>
+                          <span className="text-base text-emerald-300">{formatMoney(totals.finalTotal)} {currencySymbol}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 text-center text-xs font-bold text-slate-500 bg-slate-50 rounded-xl">
+                      {isAr ? '(يتبع تفاصيل البنود والإجماليات في الصفحة التالية...)' : '(Continued on next page...)'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Modern Verification Footer with QR Code */}
+              <footer className="p-5 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between">
+                <div className="text-[10px] font-semibold text-slate-500 space-y-0.5">
+                  <div className="text-slate-700 font-bold">
+                    {isAr
+                      ? `فاتورة ضريبية إلكترونية معتمدة — ${seller.arabicName || 'منصة InvoCore'}`
+                      : `Official E-Invoice — ${seller.englishName || seller.arabicName || 'InvoCore Technologies'}`}
+                  </div>
+                  <div>
+                    {isAr
+                      ? 'تم التشفير والتحقق وفق اشتراطات الفوترة الإلكترونية المعتمدة'
+                      : 'Cryptographically verified under official e-invoicing compliance'}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 border border-slate-200 rounded-xl bg-white shadow-xs">
+                    <SafeQRCode
+                      value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
+                      size={64}
+                      level="L"
+                      includeMargin={false}
+                    />
+                  </div>
+                </div>
+              </footer>
+            </div>
+          );
+        }
+
+        // =========================================================================
+        // TEMPLATE B: CORPORATE CLASSIC GRID (OFFICIAL ACCOUNTING LEDGER)
+        // =========================================================================
+        if (templateStyle === 'classic') {
+          return (
+            <div
+              key={`page-classic-${actualPageNo}`}
+              dir={isAr ? 'rtl' : 'ltr'}
+              style={{
+                fontFamily: seller.fontFamily || (isAr ? "'Amiri', 'Traditional Arabic', serif" : "Georgia, 'Times New Roman', serif"),
+              }}
+              className="invoice-a4-page bg-white text-slate-900 shadow-2xl print:shadow-none mx-auto relative flex flex-col justify-between box-border p-7 border-4 border-double border-slate-900"
+            >
+              {isWatermarked && <TrialWatermark />}
+
+              <div>
+                {/* 1. Formal Corporate Header: Arabic Right, English Left, Logo & Double-Bordered Title Center */}
+                <header className="border-b-4 border-double border-slate-900 pb-4 mb-4">
+                  <div className="grid grid-cols-12 items-center gap-2">
+                    {/* Arabic Company Credentials (Col 4) */}
+                    <div className="col-span-4 text-right space-y-0.5">
+                      <h2 className="text-sm font-black text-slate-900 leading-tight">
+                        {seller.arabicName || 'شركة إنفو كور المحدودة'}
+                      </h2>
+                      <div className="text-[10px] font-bold text-slate-700 num-tabular">
+                        {market.crNumberLabelAr}: {seller.crNumber || '—'}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-700 num-tabular">
+                        {market.taxNumberLabelAr}: {seller.taxNumber || '—'}
+                      </div>
+                      {seller.address && (
+                        <div className="text-[9px] text-slate-600 leading-snug">{seller.address}</div>
+                      )}
+                    </div>
+
+                    {/* Centered Formal Emblem & Double-Bordered Title (Col 4) */}
+                    <div className="col-span-4 flex flex-col items-center justify-center text-center">
+                      <div className="mb-1.5 flex items-center justify-center">
+                        {seller.logoDataUrl ? (
+                          <img
+                            src={seller.logoDataUrl}
+                            alt="Logo"
+                            className="max-h-14 max-w-28 object-contain"
+                          />
+                        ) : (
+                          <InvoCoreLogo size={42} variant="dark" />
+                        )}
+                      </div>
+                      <div className="border-2 border-slate-900 bg-slate-50 px-3 py-1 rounded-sm shadow-2xs">
+                        <div className="text-xs font-black tracking-wide text-slate-900">
+                          {market.invoiceTitleAr}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-700 tracking-wider uppercase">
+                          {market.invoiceTitleEn}
+                        </div>
+                      </div>
+                      <div className="text-[8.5px] font-bold text-slate-500 mt-1 uppercase tracking-widest">
+                        {market.authorityNameAr}
+                      </div>
+                    </div>
+
+                    {/* English Company Credentials (Col 4) */}
+                    <div dir="ltr" className="col-span-4 text-left space-y-0.5">
+                      <h2 className="text-xs font-black text-slate-900 leading-tight">
+                        {seller.englishName || 'InvoCore Technologies Ltd.'}
+                      </h2>
+                      <div className="text-[10px] font-bold text-slate-700 num-tabular">
+                        INV #{invoice.invoiceNumber} | {invoice.date}
+                      </div>
+                      {seller.iban && (
+                        <div className="text-[9.5px] font-mono font-bold text-slate-700">
+                          IBAN: {seller.iban}
+                        </div>
+                      )}
+                      {seller.phone && (
+                        <div className="text-[9px] text-slate-600">TEL: {seller.phone}</div>
+                      )}
+                    </div>
+                  </div>
+                </header>
+
+                {/* 2. Formal Accounting Grid for Customer & Invoice Details */}
+                <table className="w-full border-collapse border-2 border-slate-900 text-xs mb-4">
+                  <tbody>
+                    <tr className="border-b border-slate-800">
+                      <td className="bg-slate-100 font-bold p-2 w-32 border-l border-slate-800">
+                        {isAr ? 'اسم العميل / المكلف:' : 'Customer Name:'}
+                      </td>
+                      <td className="p-2 font-black text-slate-900 border-l border-slate-800">
+                        {invoice.client.name || (isAr ? 'عميل نقدي عام' : 'Cash Client')}
+                      </td>
+                      <td className="bg-slate-100 font-bold p-2 w-28 border-l border-slate-800">
+                        {isAr ? 'رقم الفاتورة:' : 'Invoice No:'}
+                      </td>
+                      <td className="p-2 font-mono font-black text-slate-900 num-tabular">
+                        #{invoice.invoiceNumber}
+                      </td>
+                    </tr>
+                    <tr className="border-b border-slate-800">
+                      <td className="bg-slate-100 font-bold p-2 border-l border-slate-800">
+                        {isAr ? market.taxNumberLabelAr : market.taxNumberLabelEn}:
+                      </td>
+                      <td className="p-2 font-mono font-bold num-tabular border-l border-slate-800">
+                        {invoice.client.taxNumber || '—'}
+                      </td>
+                      <td className="bg-slate-100 font-bold p-2 border-l border-slate-800">
+                        {isAr ? 'تاريخ الفاتورة:' : 'Issue Date:'}
+                      </td>
+                      <td className="p-2 font-bold num-tabular">
+                        {invoice.date}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="bg-slate-100 font-bold p-2 border-l border-slate-800">
+                        {isAr ? 'العنوان والمقر:' : 'Address:'}
+                      </td>
+                      <td className="p-2 text-slate-700 border-l border-slate-800">
+                        {invoice.client.address || '—'}
+                      </td>
+                      <td className="bg-slate-100 font-bold p-2 border-l border-slate-800">
+                        {isAr ? 'طريقة الدفع:' : 'Terms:'}
+                      </td>
+                      <td className="p-2 font-bold">
+                        {invoice.paymentMethod}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* 3. Full Structured Accounting Ledger Table (border-collapse on all cells) */}
+                <table className="w-full border-collapse border-2 border-slate-900 text-xs text-center mb-4">
+                  <thead>
+                    <tr className="bg-slate-200 text-slate-900 font-black border-b-2 border-slate-900 text-[11px]">
+                      <th className="border border-slate-700 py-2 px-1 w-10">م</th>
+                      <th className={`border border-slate-700 py-2 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
+                        {isAr ? 'البيان وتفاصيل الأصناف والخدمات' : 'Description of Goods / Services'}
+                      </th>
+                      <th className="border border-slate-700 py-2 px-2 w-14">{isAr ? 'الوحدة' : 'Unit'}</th>
+                      <th className="border border-slate-700 py-2 px-2 w-16">{isAr ? 'الكمية' : 'Qty'}</th>
+                      <th className="border border-slate-700 py-2 px-2 w-20">{isAr ? 'السعر' : 'Rate'}</th>
+                      <th className="border border-slate-700 py-2 px-2 w-16">{isAr ? 'الضريبة' : 'VAT'}</th>
+                      <th className="border border-slate-700 py-2 px-2 w-24">
+                        {isAr ? `الإجمالي (${currencySymbol})` : `Total (${currencySymbol})`}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageData.items.map((item, idx) => {
+                      const rowNo = pageData.startIndex + idx + 1;
+                      const lineSubtotal = (Number(item.qty) || 0) * (Number(item.unitPrice) || 0);
+                      const lineVatRate = invoice.isReverseCharge ? 0 : (invoice.vatRate ?? market.defaultVatRate);
+                      const vatAmount = lineSubtotal * (lineVatRate / 100);
+                      const lineTotal = lineSubtotal + vatAmount;
+
+                      return (
+                        <tr key={item.id || idx} className="border-b border-slate-400">
+                          <td className="border border-slate-400 py-2 px-1 num-tabular font-bold">{rowNo}</td>
+                          <td className={`border border-slate-400 py-2 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
+                            <div className="font-bold text-slate-900">{item.description}</div>
+                          </td>
+                          <td className="border border-slate-400 py-2 px-1 text-slate-700">{item.unit || 'وحدة'}</td>
+                          <td className="border border-slate-400 py-2 px-1 num-tabular font-bold">{formatQty(item.qty)}</td>
+                          <td className="border border-slate-400 py-2 px-1 num-tabular font-bold">{formatMoney(item.unitPrice)}</td>
+                          <td className="border border-slate-400 py-2 px-1 num-tabular">{lineVatRate}%</td>
+                          <td className="border border-slate-400 py-2 px-2 num-tabular font-black">{formatMoney(lineTotal)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* 4. Structured Accounting Sub-Table */}
+                {isLastPage && (
+                  <div className="grid grid-cols-12 gap-3 mb-4">
+                    <div className="col-span-7 border-2 border-slate-900 p-2.5 space-y-1.5 text-xs">
+                      <div className="font-bold text-slate-700">
+                        {isAr ? 'المبلغ كتابةً وتفقيطاً:' : 'Amount in Words:'}
+                      </div>
+                      <div className="font-black text-slate-900 bg-slate-50 p-2 border border-slate-300">
+                        {displayedTafqeet}
+                      </div>
+                      {seller.iban && (
+                        <div className="text-[10px] text-slate-700 pt-1">
+                          <strong>{isAr ? 'الحساب البنكي:' : 'Bank:'}</strong> {seller.bankName} — IBAN: {seller.iban}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="col-span-5">
+                      <table className="w-full border-collapse border-2 border-slate-900 text-xs">
+                        <tbody>
+                          <tr className="border-b border-slate-800">
+                            <td className="bg-slate-100 font-bold p-1.5 border-l border-slate-800">
+                              {isAr ? 'المجموع قبل الضريبة:' : 'Subtotal:'}
+                            </td>
+                            <td className="p-1.5 font-bold num-tabular text-right">
+                              {formatMoney(totals.subtotal)} {currencySymbol}
+                            </td>
+                          </tr>
+                          {totals.totalDiscount > 0 && (
+                            <tr className="border-b border-slate-800">
+                              <td className="bg-slate-100 font-bold p-1.5 border-l border-slate-800 text-rose-700">
+                                {isAr ? 'الخصم:' : 'Discount:'}
+                              </td>
+                              <td className="p-1.5 font-bold num-tabular text-right text-rose-700">
+                                -{formatMoney(totals.totalDiscount)} {currencySymbol}
+                              </td>
+                            </tr>
+                          )}
+                          <tr className="border-b border-slate-800">
+                            <td className="bg-slate-100 font-bold p-1.5 border-l border-slate-800">
+                              {isAr ? market.taxShortLabelAr : market.taxShortLabelEn} ({totals.vatRate}%):
+                            </td>
+                            <td className="p-1.5 font-bold num-tabular text-right">
+                              {formatMoney(totals.vatAmount)} {currencySymbol}
+                            </td>
+                          </tr>
+                          <tr className="bg-slate-900 text-white font-black text-sm">
+                            <td className="p-2 border-l border-slate-700">
+                              {isAr ? 'صافي الفاتورة:' : 'Total Due:'}
+                            </td>
+                            <td className="p-2 num-tabular text-right text-amber-300">
+                              {formatMoney(totals.finalTotal)} {currencySymbol}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Traditional Formal 3-Column Signature & Official Stamp Boxes */}
+              <div className="pt-3 border-t-2 border-slate-900">
+                <div className="grid grid-cols-12 gap-3 text-xs">
+                  {/* Box 1: Receiver */}
+                  <div className="col-span-4 border border-slate-800 p-2 text-center flex flex-col justify-between h-24">
+                    <div className="font-bold text-slate-800 border-b border-slate-300 pb-1">
+                      {isAr ? 'توقيع المستلم (Receiver)' : 'Receiver Signature'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">....................................</div>
+                  </div>
+
+                  {/* Box 2: Accountant */}
+                  <div className="col-span-4 border border-slate-800 p-2 text-center flex flex-col justify-between h-24">
+                    <div className="font-bold text-slate-800 border-b border-slate-300 pb-1">
+                      {isAr ? 'المحاسب المالي (Accountant)' : 'Finance / Accountant'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">....................................</div>
+                  </div>
+
+                  {/* Box 3: Official Stamp & QR */}
+                  <div className="col-span-4 border-2 border-dashed border-slate-800 p-1 text-center flex items-center justify-between h-24 bg-slate-50/50">
+                    <div className="flex-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {isAr ? 'الختم الرسمي للمنشأة' : 'Official Seal'}
+                    </div>
+                    <div className="shrink-0 p-0.5 bg-white border border-slate-300">
+                      <SafeQRCode
+                        value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
+                        size={56}
+                        level="L"
+                        includeMargin={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // =========================================================================
+        // TEMPLATE C: SWISS MINIMALIST (STRIPE / APPLE ARCHITECTURAL STYLE)
+        // =========================================================================
         return (
           <div
-            key={`page-${actualPageNo}`}
+            key={`page-minimalist-${actualPageNo}`}
             dir={isAr ? 'rtl' : 'ltr'}
             style={{
-              borderColor: primaryColor,
-              fontFamily: seller.fontFamily || (isAr ? "'Tajawal', 'Cairo', sans-serif" : "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"),
+              fontFamily: seller.fontFamily || "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif",
             }}
-            className={`invoice-a4-page bg-white text-slate-900 shadow-2xl print:shadow-none mx-auto relative flex flex-col justify-start box-border p-7 ${
-              templateStyle === 'classic'
-                ? 'border-4 border-double'
-                : templateStyle === 'modern'
-                ? 'border-t-8 border-x border-b border-slate-200'
-                : 'border border-slate-200'
-            }`}
+            className="invoice-a4-page bg-white text-slate-900 shadow-2xl print:shadow-none mx-auto relative flex flex-col justify-between box-border p-8 border border-slate-200"
           >
             {isWatermarked && <TrialWatermark />}
 
-            {/* ------------------------------------------------------------- */}
-            {/* TOP HEADER SECTION                                            */}
-            {/* ------------------------------------------------------------- */}
-            {templateStyle === 'modern' && (
-              <header className="border-b border-slate-200 pb-4 mb-4">
-                <div className="flex justify-between items-start gap-4">
-                  {/* Company Info & Logo */}
-                  <div className="flex items-center gap-3.5">
-                    {seller.logoDataUrl ? (
-                      <img
-                        src={seller.logoDataUrl}
-                        alt="Logo"
-                        className="max-h-16 max-w-36 object-contain rounded-lg border border-slate-200 p-1"
-                      />
-                    ) : (
-                      <div className="p-1 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">
-                        <InvoCoreLogo size={46} variant="dark" />
-                      </div>
-                    )}
-                    <div>
-                      <h1 style={{ color: primaryColor }} className="text-lg font-black leading-tight">
-                        {isAr ? (seller.arabicName || 'منصة InvoCore') : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
-                      </h1>
-                      {seller.englishName && isAr && (
-                        <div className="text-[11px] font-bold text-slate-500 tracking-wide">
-                          {seller.englishName}
-                        </div>
-                      )}
-                      {seller.arabicName && !isAr && (
-                        <div className="text-[11px] font-bold text-slate-500 tracking-wide">
-                          {seller.arabicName}
-                        </div>
-                      )}
-                      <div className="text-[10px] font-semibold text-slate-600 mt-1 flex flex-wrap gap-2 num-tabular">
-                        {seller.crNumber && (
-                          <span>{isAr ? `${market.crNumberLabelAr}:` : `${market.crNumberLabelEn}:`} <strong>{seller.crNumber}</strong></span>
-                        )}
-                        {seller.taxNumber && (
-                          <span>{isAr ? `${market.taxNumberLabelAr}:` : `${market.taxNumberLabelEn}:`} <strong>{seller.taxNumber}</strong></span>
-                        )}
-                      </div>
-                      {seller.address && (
-                        <div className="text-[9.5px] text-slate-500 mt-0.5">{seller.address}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Invoice Badge & Metadata */}
-                  <div className={`flex flex-col ${isAr ? 'items-end text-left' : 'items-start text-right'}`}>
-                    <div
-                      style={{ backgroundColor: primaryColor }}
-                      className="text-white px-3.5 py-1.5 rounded-lg text-center shadow-xs"
-                    >
-                      <div className="text-[13px] font-black">{isAr ? market.invoiceTitleAr : market.invoiceTitleEn}</div>
-                      <div className="text-[8.5px] font-bold tracking-widest uppercase opacity-90">
-                        {isAr ? market.authorityNameAr : market.authorityNameEn}
-                      </div>
-                    </div>
-                    <div className="text-[11px] font-extrabold text-slate-700 mt-2 space-y-0.5 num-tabular" dir="ltr">
-                      <div>Invoice No: <span className="font-black text-slate-900">#{invoice.invoiceNumber}</span></div>
-                      <div>Date: <span className="font-bold">{invoice.date}</span></div>
-                    </div>
-                  </div>
-                </div>
-              </header>
-            )}
-
-            {templateStyle === 'classic' && (
-              <header className="border-b-2 border-slate-900 pb-4 mb-4">
-                <div className="grid grid-cols-12 items-center gap-3">
-                  <div className={`col-span-5 ${isAr ? 'text-right' : 'text-left'}`}>
-                    <h1 style={{ color: primaryColor }} className="text-base font-black leading-snug">
-                      {isAr ? (seller.arabicName || 'منصة InvoCore') : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
-                    </h1>
-                    <div className="text-[10px] font-bold text-slate-600 num-tabular mt-0.5">
-                      {isAr ? market.crNumberLabelAr : market.crNumberLabelEn}: {seller.crNumber || '—'} | {isAr ? market.taxNumberLabelAr : market.taxNumberLabelEn}: {seller.taxNumber || '—'}
-                    </div>
-                    <div className="text-[9.5px] text-slate-500 mt-0.5">{seller.address}</div>
-                  </div>
-
-                  <div className="col-span-2 text-center flex flex-col items-center justify-center">
-                    {seller.logoDataUrl ? (
-                      <img src={seller.logoDataUrl} alt="Logo" className="max-h-14 max-w-28 object-contain mb-1" />
-                    ) : (
-                      <div className="mb-1">
-                        <InvoCoreLogo size={42} variant="dark" />
-                      </div>
-                    )}
-                    <div className="border border-slate-800 rounded px-2 py-0.5 text-[11px] font-black bg-slate-100">
-                      {isAr ? market.invoiceTitleAr : market.invoiceTitleEn}
-                    </div>
-                  </div>
-
-                  <div dir="ltr" className={`col-span-5 ${isAr ? 'text-left' : 'text-right'}`}>
-                    <div className="text-xs font-black text-slate-800 leading-snug">
-                      {seller.englishName || 'InvoCore Platform'}
-                    </div>
-                    <div className="text-[10px] font-bold text-slate-600 num-tabular mt-0.5">
-                      INV: #{invoice.invoiceNumber} | Date: {invoice.date}
-                    </div>
-                    {seller.iban && (
-                      <div className="text-[9.5px] font-bold text-slate-700 num-tabular mt-0.5">
-                        IBAN: {seller.iban}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </header>
-            )}
-
-            {templateStyle === 'minimalist' && (
-              <header className="border-b border-slate-300 pb-4 mb-5">
+            <div>
+              {/* 1. Ultra-Clean Architectural Header */}
+              <header className="border-b border-slate-200 pb-6 mb-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                      {isAr ? market.invoiceTitleAr : market.invoiceTitleEn}
+                    <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-slate-900 uppercase">
+                      {isAr ? market.invoiceTitleAr : 'Invoice'}
                     </h1>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <div className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase mt-1">
                       {isAr ? market.authorityNameAr : market.authorityNameEn}
-                    </div>
-                    <div className="pt-2 text-[11.5px] font-bold text-slate-700 space-y-0.5 num-tabular">
-                      <div>{isAr ? 'رقم الفاتورة:' : 'Invoice No:'} <span className="font-extrabold text-slate-900">#{invoice.invoiceNumber}</span></div>
-                      <div>{isAr ? 'التاريخ:' : 'Date:'} <span className="font-extrabold text-slate-900">{invoice.date}</span></div>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className={`${isAr ? 'text-left' : 'text-right'} space-y-0.5`}>
-                      <div style={{ color: primaryColor }} className="text-sm font-black">
-                        {isAr ? (seller.arabicName || 'منصة InvoCore') : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
-                      </div>
-                      <div className="text-[10.5px] font-bold text-slate-600">
-                        {seller.englishName || 'InvoCore Platform'}
-                      </div>
-                      <div className="text-[10px] font-semibold text-slate-500 num-tabular">
-                        {isAr ? market.crNumberLabelAr : market.crNumberLabelEn}: {seller.crNumber} | {isAr ? market.taxNumberLabelAr : market.taxNumberLabelEn}: {seller.taxNumber}
-                      </div>
-                    </div>
+                  <div className={`flex flex-col ${isAr ? 'items-start text-right' : 'items-end text-left'}`}>
                     {seller.logoDataUrl ? (
-                      <img src={seller.logoDataUrl} alt="Logo" className="max-h-14 max-w-28 object-contain" />
+                      <img src={seller.logoDataUrl} alt="Logo" className="max-h-12 max-w-28 object-contain mb-2" />
                     ) : (
-                      <InvoCoreLogo size={42} variant="dark" />
+                      <div className="mb-2">
+                        <InvoCoreLogo size={36} variant="dark" />
+                      </div>
+                    )}
+                    <div className="text-sm font-bold text-slate-900">
+                      {isAr ? (seller.arabicName || 'منصة InvoCore') : (seller.englishName || seller.arabicName || 'InvoCore Technologies')}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono num-tabular mt-0.5">
+                      {isAr ? market.taxNumberLabelAr : 'VAT'}: {seller.taxNumber || '—'}
+                    </div>
+                    {seller.address && (
+                      <div className="text-[10px] text-slate-400 max-w-xs">{seller.address}</div>
                     )}
                   </div>
                 </div>
-              </header>
-            )}
 
-            {/* ------------------------------------------------------------- */}
-            {/* CLIENT & INVOICE METADATA SECTION                             */}
-            {/* ------------------------------------------------------------- */}
-            <section className="grid grid-cols-12 gap-3 mb-4 text-xs">
-              {/* Client Info Card */}
-              <div
-                style={{ backgroundColor: `${primaryColor}08` }}
-                className={`col-span-8 border border-slate-200 rounded-xl p-3 space-y-1 ${isAr ? 'text-right' : 'text-left'}`}
-              >
-                <div style={{ color: primaryColor }} className="text-[11px] font-extrabold border-b border-slate-200/80 pb-1">
-                  {isAr ? 'بيانات العميل / Customer Details' : 'Customer & Buyer Details'}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-4 border-t border-slate-100 text-xs">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isAr ? 'رقم الفاتورة' : 'Invoice Number'}
+                    </div>
+                    <div className="font-mono font-bold text-slate-900 mt-0.5 num-tabular">#{invoice.invoiceNumber}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isAr ? 'تاريخ الإصدار' : 'Issue Date'}
+                    </div>
+                    <div className="font-medium text-slate-900 mt-0.5 num-tabular">{invoice.date}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isAr ? 'طريقة الدفع' : 'Payment Terms'}
+                    </div>
+                    <div className="font-medium text-slate-900 mt-0.5">{invoice.paymentMethod}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isAr ? 'الصفحة' : 'Page'}
+                    </div>
+                    <div className="font-mono text-slate-900 mt-0.5 num-tabular">{actualPageNo} / {totalPagesCount}</div>
+                  </div>
                 </div>
-                <div className="text-[13px] font-black text-slate-900 pt-0.5">
+              </header>
+
+              {/* 2. Client Section with Whitespace-Driven Micro-Labels */}
+              <div className="mb-6">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  {isAr ? 'بيانات العميل (Billed To)' : 'Billed To'}
+                </div>
+                <div className="text-base font-bold text-slate-900">
                   {invoice.client.name || (isAr ? 'عميل نقدي' : 'Cash Client')}
                 </div>
-                <div className="text-[11px] font-bold text-slate-600 num-tabular">
-                  {isAr ? 'الرقم الضريبي:' : 'VAT Number:'} {invoice.client.taxNumber || (isAr ? 'غير مسجل' : 'N/A')}
-                </div>
-                {invoice.client.address && (
-                  <div className="text-[10.5px] text-slate-500">{invoice.client.address}</div>
-                )}
-                {invoice.client.notes && (
-                  <div className="text-[10px] text-slate-600 font-medium">
-                    {isAr ? 'ملاحظات:' : 'Notes:'} {invoice.client.notes}
+                {invoice.client.taxNumber && (
+                  <div className="text-xs font-mono text-slate-600 mt-0.5 num-tabular">
+                    {market.taxShortLabelEn}: {invoice.client.taxNumber}
                   </div>
                 )}
+                {invoice.client.address && (
+                  <div className="text-xs text-slate-500 mt-0.5">{invoice.client.address}</div>
+                )}
               </div>
 
-              {/* Invoice Specifics Card */}
-              <div className={`col-span-4 border border-slate-200 rounded-xl p-3 space-y-1 bg-slate-50/70 ${isAr ? 'text-right' : 'text-left'}`}>
-                <div className="text-[11px] font-extrabold text-slate-700 border-b border-slate-200 pb-1">
-                  {isAr ? 'تفاصيل الفاتورة' : 'Invoice Specifics'}
-                </div>
-                <div className="text-[11px] font-bold text-slate-700">
-                  {isAr ? 'طريقة الدفع:' : 'Payment:'}{' '}
-                  <span style={{ color: primaryColor }} className="font-black">
-                    {invoice.paymentMethod === 'آجل' && !isAr ? 'Credit' : invoice.paymentMethod === 'نقدي' && !isAr ? 'Cash' : invoice.paymentMethod === 'تحويل بنكي' && !isAr ? 'Wire Transfer' : invoice.paymentMethod === 'شبكة' && !isAr ? 'POS' : invoice.paymentMethod}
-                  </span>
-                </div>
-                <div className="text-[11px] font-bold text-slate-700">
-                  {isAr ? 'وقت الإصدار:' : 'Time:'} <span className="num-tabular font-bold">{invoice.time}</span>
-                </div>
-                <div className="text-[11px] font-bold text-slate-700">
-                  {isAr ? 'الصفحة:' : 'Page:'}{' '}
-                  <span className="num-tabular font-black">
-                    {isAr ? `${actualPageNo} من ${totalPagesCount}` : `${actualPageNo} of ${totalPagesCount}`}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            {/* ------------------------------------------------------------- */}
-            {/* LINE ITEMS TABLE                                              */}
-            {/* ------------------------------------------------------------- */}
-            <section className="mb-4 flex-1">
-              <table className="w-full text-xs text-center border-collapse border border-slate-200">
+              {/* 3. Open Whitespace-Driven Table with Bottom Hairline Borders Only */}
+              <table className="w-full text-xs text-left mb-6">
                 <thead>
-                  <tr style={{ backgroundColor: primaryColor }} className="text-white text-[11px] font-bold">
-                    <th className="py-2 px-1.5 w-10">#</th>
-                    <th className={`py-2 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
-                      {isAr ? 'البيان / الوصف (Description)' : 'Item Description / Service'}
+                  <tr className="border-b border-slate-300 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="py-2.5 px-1 w-8">#</th>
+                    <th className={`py-2.5 px-2 ${isAr ? 'text-right' : 'text-left'}`}>
+                      {isAr ? 'البيان (Item)' : 'Item'}
                     </th>
-                    <th className="py-2 px-2 w-16">{isAr ? 'الوحدة' : 'Unit'}</th>
-                    <th className="py-2 px-2 w-16">{isAr ? 'الكمية' : 'Qty'}</th>
-                    <th className="py-2 px-2 w-20">{isAr ? 'سعر الوحدة' : 'Unit Price'}</th>
-                    <th className="py-2 px-2 w-16">{isAr ? market.taxShortLabelAr : market.taxShortLabelEn}</th>
-                    <th className="py-2 px-2 w-24">
+                    <th className="py-2.5 px-2 text-center w-16">{isAr ? 'الكمية' : 'Qty'}</th>
+                    <th className="py-2.5 px-2 text-right w-24">{isAr ? 'السعر' : 'Price'}</th>
+                    <th className="py-2.5 px-2 text-right w-24">
                       {isAr ? `الإجمالي (${currencySymbol})` : `Total (${currencySymbol})`}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 font-semibold text-slate-800">
+                <tbody className="divide-y divide-slate-100 text-slate-800">
                   {pageData.items.map((item, idx) => {
                     const rowNo = pageData.startIndex + idx + 1;
                     const lineSubtotal = (Number(item.qty) || 0) * (Number(item.unitPrice) || 0);
@@ -337,131 +755,83 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                     const lineTotal = lineSubtotal + vatAmount;
 
                     return (
-                      <tr key={item.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-1 num-tabular font-bold text-slate-500">{rowNo}</td>
-                        <td className={`py-2.5 px-3 ${isAr ? 'text-right' : 'text-left'}`}>
-                          <div className="font-extrabold text-slate-900 text-[12.5px]">{item.description}</div>
-                          {item.itemCode && (
-                            <div className="text-[9.5px] text-slate-400 num-tabular">
-                              {isAr ? 'كود:' : 'SKU:'} {item.itemCode}
-                            </div>
-                          )}
+                      <tr key={item.id || idx}>
+                        <td className="py-3.5 px-1 text-slate-400 num-tabular">{rowNo}</td>
+                        <td className={`py-3.5 px-2 ${isAr ? 'text-right' : 'text-left'}`}>
+                          <div className="font-semibold text-slate-900">{item.description}</div>
                         </td>
-                        <td className="py-2.5 px-1.5 text-slate-600 font-bold">{item.unit || (isAr ? 'وحدة' : 'Unit')}</td>
-                        <td className="py-2.5 px-1.5 num-tabular font-extrabold">{formatQty(item.qty)}</td>
-                        <td className="py-2.5 px-1.5 num-tabular font-bold">{formatMoney(item.unitPrice)}</td>
-                        <td className="py-2.5 px-1.5 num-tabular text-slate-500">{lineVatRate}%</td>
-                        <td className="py-2.5 px-2 num-tabular font-black text-slate-950">{formatMoney(lineTotal)}</td>
+                        <td className="py-3.5 px-2 text-center num-tabular text-slate-600">
+                          {formatQty(item.qty)} {item.unit || ''}
+                        </td>
+                        <td className="py-3.5 px-2 text-right num-tabular text-slate-600">
+                          {formatMoney(item.unitPrice)}
+                        </td>
+                        <td className="py-3.5 px-2 text-right num-tabular font-bold text-slate-950">
+                          {formatMoney(lineTotal)}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </section>
 
-            {/* ------------------------------------------------------------- */}
-            {/* TOTALS & SUMMARY BLOCK                                        */}
-            {/* ------------------------------------------------------------- */}
-            <div className="mt-auto pt-3 border-t border-slate-200">
-              {isLastPage ? (
-                <div className="grid grid-cols-12 gap-3.5 items-end mb-4">
-                  {/* Left Column: Tafqeet & Bank details */}
-                  <div className="col-span-7 space-y-2">
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                      <div className="text-[10px] font-bold text-slate-500">
-                        {isAr ? 'المبلغ كتابةً وتفقيطاً:' : 'Amount in Words (Tafqeet):'}
-                      </div>
-                      <div style={{ color: primaryColor }} className="text-xs font-black mt-0.5">
-                        {displayedTafqeet}
-                      </div>
+              {/* 4. Minimalist Floating Summary Block */}
+              {isLastPage && (
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pt-4 border-t border-slate-200">
+                  <div className="space-y-2 max-w-sm text-xs">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isAr ? 'المبلغ بالحروف' : 'Amount in Words'}
                     </div>
-
+                    <div className="text-slate-800 font-medium leading-relaxed">
+                      {displayedTafqeet}
+                    </div>
                     {seller.iban && (
-                      <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-2 text-[10px] text-slate-600 flex justify-between num-tabular">
-                        <span>{isAr ? 'الحساب البنكي:' : 'Bank Wire:'} <strong>{seller.bankName || 'SNB Bank'}</strong></span>
-                        <span dir="ltr" className="font-mono font-bold">IBAN: {seller.iban}</span>
-                      </div>
-                    )}
-
-                    {totals.isReverseCharge && (
-                      <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-2 text-[10px] font-bold text-blue-900">
-                        {isAr
-                          ? 'إقرار ضريبي: خاضع لآلية التكليف العكسي (المادة 196 من توجيه المجلس الأوروبي 2006/112/EC) — تلتزم المنشأة المستلمة بسداد الضريبة.'
-                          : 'Tax Legal Notice: B2B Reverse Charge applies (Article 196 Council Directive 2006/112/EC) — VAT to be accounted for by recipient.'}
+                      <div className="text-[10px] text-slate-500 font-mono pt-1">
+                        Bank: {seller.bankName} | IBAN: {seller.iban}
                       </div>
                     )}
                   </div>
 
-                  {/* Right Column: Financial Totals Breakdown */}
-                  <div className="col-span-5 border border-slate-300 rounded-xl overflow-hidden bg-white text-xs">
-                    <div className="divide-y divide-slate-100">
-                      <div className="flex justify-between p-2 font-bold text-slate-700 num-tabular">
-                        <span>{isAr ? `المجموع الفرعي (قبل ${market.taxShortLabelAr}):` : `Subtotal (Excl. ${market.taxShortLabelEn}):`}</span>
-                        <span>{formatMoney(totals.subtotal)} {currencySymbol}</span>
+                  <div className="w-full sm:w-64 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600 num-tabular">
+                      <span>{isAr ? 'المجموع الفرعي:' : 'Subtotal:'}</span>
+                      <span>{formatMoney(totals.subtotal)} {currencySymbol}</span>
+                    </div>
+                    {totals.totalDiscount > 0 && (
+                      <div className="flex justify-between text-rose-600 num-tabular">
+                        <span>{isAr ? 'الخصم:' : 'Discount:'}</span>
+                        <span>-{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
                       </div>
-                      {totals.totalDiscount > 0 && (
-                        <div className="flex justify-between p-2 font-bold text-rose-700 num-tabular">
-                          <span>{isAr ? 'إجمالي الخصم:' : 'Discount:'}</span>
-                          <span>-{formatMoney(totals.totalDiscount)} {currencySymbol}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between p-2 font-bold text-slate-700 num-tabular">
-                        <span>{isAr ? `${market.taxShortLabelAr} (${totals.vatRate}%):` : `${market.taxShortLabelEn} (${totals.vatRate}%):`}</span>
-                        <span>{formatMoney(totals.vatAmount)} {currencySymbol}</span>
-                      </div>
-                      {totals.withholdingTaxAmount && totals.withholdingTaxAmount > 0 ? (
-                        <div className="flex justify-between p-2 font-bold text-amber-700 bg-amber-50/70 num-tabular">
-                          <span>{isAr ? `خصم وتحصيل من المنبع (${totals.withholdingTaxRate}%):` : `Withholding Tax (-${totals.withholdingTaxRate}%):`}</span>
-                          <span>-{formatMoney(totals.withholdingTaxAmount)} {currencySymbol}</span>
-                        </div>
-                      ) : null}
-                      <div
-                        style={{ backgroundColor: primaryColor }}
-                        className="flex justify-between p-2.5 font-black text-white text-sm num-tabular"
-                      >
-                        <span>{isAr ? 'الصافي الإجمالي المستحق:' : 'Net Total Due:'}</span>
-                        <span>{formatMoney(totals.finalTotal)} {currencySymbol}</span>
-                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-600 num-tabular">
+                      <span>{isAr ? market.taxShortLabelAr : market.taxShortLabelEn} ({totals.vatRate}%):</span>
+                      <span>{formatMoney(totals.vatAmount)} {currencySymbol}</span>
+                    </div>
+                    <div className="border-t border-slate-900 pt-2 flex justify-between items-baseline num-tabular">
+                      <span className="text-sm font-bold text-slate-900">{isAr ? 'الصافي الإجمالي:' : 'Total:'}</span>
+                      <span className="text-2xl font-black text-slate-950">
+                        {formatMoney(totals.finalTotal)} <span className="text-sm font-semibold">{currencySymbol}</span>
+                      </span>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-2 text-center text-xs font-bold text-slate-500 bg-slate-50 rounded-lg mb-3">
-                  {isAr ? '(يتبع تفاصيل البنود والإجماليات في الصفحة التالية...)' : '(Continued on next page...)'}
                 </div>
               )}
-
-              {/* ------------------------------------------------------------- */}
-              {/* FOOTER & ZATCA VERIFICATION QR                                */}
-              {/* ------------------------------------------------------------- */}
-              <footer className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                <div className="text-[10px] font-semibold text-slate-500 space-y-0.5">
-                  <div>
-                    {isAr ? (
-                      <>فاتورة ضريبية إلكترونية معتمدة صادرة من: <strong>{seller.arabicName || 'منصة InvoCore'}</strong></>
-                    ) : (
-                      <>Official Tax Invoice issued by: <strong>{seller.englishName || seller.arabicName || 'InvoCore Technologies'}</strong></>
-                    )}
-                  </div>
-                  <div>
-                    {isAr
-                      ? 'هذا الرمز مشفر وفقاً لمتطلبات هيئة الزكاة والضريبة والجمارك (ZATCA)'
-                      : 'Encrypted QR code generated in compliance with ZATCA e-invoicing standards'}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="p-1 border border-slate-200 rounded-lg bg-white shadow-xs">
-                    <SafeQRCode
-                      value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
-                      size={68}
-                      level="L"
-                      includeMargin={false}
-                    />
-                  </div>
-                </div>
-              </footer>
             </div>
+
+            {/* 5. Minimalist Discreet Footer */}
+            <footer className="pt-6 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+              <div>
+                <span>{seller.arabicName || seller.englishName}</span> • <span>E-Invoice Compliance</span>
+              </div>
+              <div className="opacity-75">
+                <SafeQRCode
+                  value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
+                  size={48}
+                  level="L"
+                  includeMargin={false}
+                />
+              </div>
+            </footer>
           </div>
         );
       })}
