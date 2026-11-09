@@ -22,6 +22,7 @@ import {
   Globe,
   History,
   Layers,
+  Link2,
   LogIn,
   LogOut,
   MessageCircle,
@@ -39,6 +40,7 @@ import {
   Upload,
   User as UserIcon,
   Users,
+  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -128,6 +130,7 @@ import {
 } from './lib/supabase';
 import { AuthModal } from './components/AuthModal';
 import { TrialLimitModal } from './components/TrialLimitModal';
+import { ProspectLinkGenerator } from './components/ProspectLinkGenerator';
 import { InvoCoreLogo } from './components/InvoCoreLogo';
 import {
   getMarketConfig,
@@ -152,6 +155,59 @@ const A4_PIXEL_WIDTH = 794;
 const DEFAULT_PANEL_WIDTH = 540;
 const MIN_PANEL_WIDTH = 380;
 
+function parseUrlProspectParams(): {
+  prospect: string | null;
+  market: TaxJurisdiction | null;
+  lang: Language | null;
+  template: TemplateStyle | null;
+  color: string | null;
+} {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const rawProspect = params.get('prospect')?.trim() || null;
+    const rawMarket = params.get('market')?.trim().toUpperCase() || null;
+    const rawLang = params.get('lang')?.trim().toLowerCase() || null;
+    const rawTemplate = params.get('template')?.trim().toLowerCase() || null;
+    const rawColor = params.get('color')?.trim() || null;
+
+    const validMarkets: TaxJurisdiction[] = ['KSA', 'EGY', 'USA', 'EU'];
+    const market =
+      rawMarket && validMarkets.includes(rawMarket as TaxJurisdiction)
+        ? (rawMarket as TaxJurisdiction)
+        : null;
+
+    const lang: Language | null =
+      rawLang === 'ar' || rawLang === 'en'
+        ? rawLang
+        : market
+        ? market === 'USA' || market === 'EU'
+          ? 'en'
+          : 'ar'
+        : null;
+
+    const template: TemplateStyle | null =
+      rawTemplate === 'classic'
+        ? 'classic'
+        : rawTemplate === 'minimal' || rawTemplate === 'minimalist'
+        ? 'minimalist'
+        : rawTemplate === 'modern'
+        ? 'modern'
+        : null;
+
+    let color: string | null = null;
+    if (rawColor) {
+      const cleanedHex = rawColor.replace(/^#/, '');
+      if (/^[0-9A-Fa-f]{3,6}$/.test(cleanedHex)) {
+        color = `#${cleanedHex}`;
+      }
+    }
+
+    return { prospect: rawProspect, market, lang, template, color };
+  } catch {
+    return { prospect: null, market: null, lang: null, template: null, color: null };
+  }
+}
+
 export function App() {
   // 1. Check URL Query Parameter or Route Path for Public Client PDF View Mode (/v/... or ?invoice=...)
   const publicInvoiceParam = useMemo(() => {
@@ -175,6 +231,15 @@ export function App() {
     return decodePublicInvoiceParam(publicInvoiceParam);
   }, [publicInvoiceParam]);
 
+  const initialProspectParams = useMemo(() => parseUrlProspectParams(), []);
+  const [prospectCompanyName, setProspectCompanyName] = useState<string | null>(
+    () => initialProspectParams.prospect
+  );
+  const [isProspectBannerDismissed, setIsProspectBannerDismissed] =
+    useState<boolean>(false);
+  const [isProspectGeneratorOpen, setIsProspectGeneratorOpen] =
+    useState<boolean>(false);
+
   // 2. Persistent Admin Workspace State
   const [catalog, setCatalog] = useState<CatalogItem[]>(() =>
     loadCatalogFromStorage()
@@ -191,16 +256,34 @@ export function App() {
     return loadNextInvoiceNumber();
   });
 
-  const [seller, setSeller] = useState<SellerInfo>(() =>
-    loadSellerFromStorage()
-  );
+  const [seller, setSeller] = useState<SellerInfo>(() => {
+    const loaded = loadSellerFromStorage();
+    const p = parseUrlProspectParams();
+    return {
+      ...loaded,
+      ...(p.prospect ? { arabicName: p.prospect, englishName: p.prospect } : {}),
+      ...(p.market ? { jurisdiction: p.market } : {}),
+      ...(p.template ? { templateStyle: p.template } : {}),
+      ...(p.color ? { primaryColor: p.color } : {}),
+    };
+  });
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
 
   const [invoice, setInvoice] = useState<InvoiceData>(() => {
     const existing = loadInvoicesFromStorage();
     const startNo =
       existing.length === 0 ? INITIAL_INVOICE_NUMBER : loadNextInvoiceNumber();
-    return createFreshBlankInvoice(startNo);
+    const fresh = createFreshBlankInvoice(startNo);
+    const p = parseUrlProspectParams();
+    if (p.market) {
+      const mCfg = getMarketConfig(p.market);
+      return {
+        ...fresh,
+        jurisdiction: p.market,
+        vatRate: mCfg.defaultVatRate,
+      };
+    }
+    return fresh;
   });
 
   // Saved Clients Directory ("دفتر العملاء المحفوظين")
@@ -215,6 +298,8 @@ export function App() {
 
   // --- 100% Arabic & English Bidirectional Localization Engine ---
   const [lang, setLang] = useState<Language>(() => {
+    const p = parseUrlProspectParams();
+    if (p.lang) return p.lang;
     try {
       const saved = localStorage.getItem('invocore_lang') as Language;
       if (saved === 'ar' || saved === 'en') return saved;
@@ -236,6 +321,18 @@ export function App() {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }, [lang]);
+
+  // Keyboard Shortcut (Shift + Alt + D) for Founder Outreach Link Generator
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && e.altKey && (e.code === 'KeyD' || e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        setIsProspectGeneratorOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // --- Supabase Authentication, Profile & Usage Tracking ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -1410,6 +1507,60 @@ export function App() {
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
         className="no-print min-h-screen w-full max-w-[100vw] overflow-x-hidden lg:h-screen lg:overflow-hidden flex flex-col bg-slate-100 text-slate-900"
       >
+        {/* Personalized Executive Prospect Welcome Banner (Active when ?prospect=... is in URL) */}
+        {prospectCompanyName && !isProspectBannerDismissed && (
+          <div className="bg-gradient-to-r from-teal-950 via-[#0F172A] to-teal-950 border-b border-teal-500/40 px-3 sm:px-5 py-2.5 text-xs text-white flex flex-wrap items-center justify-between gap-3 z-40 shrink-0 shadow-md">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-teal-500/20 border border-teal-400/40 text-teal-300 shrink-0">
+                <Sparkles className="w-3.5 h-3.5" />
+              </span>
+              <p className="font-semibold text-slate-100 leading-relaxed">
+                {lang === 'ar' ? (
+                  <>
+                    نسخة عرض مخصصة لـ{' '}
+                    <strong className="font-black text-teal-300 underline decoration-teal-500/50 underline-offset-4">
+                      {prospectCompanyName}
+                    </strong>{' '}
+                    — جرب إصدار الفواتير الضريبية وسندات القبض فوراً، أو اطلب تفعيل النظام الكامل بهويتكم الخاصة.
+                  </>
+                ) : (
+                  <>
+                    Custom Live Preview prepared for{' '}
+                    <strong className="font-black text-teal-300 underline decoration-teal-500/50 underline-offset-4">
+                      {prospectCompanyName}
+                    </strong>{' '}
+                    — Test tax invoicing &amp; vouchers live, or request full White-Label deployment for your team.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsTrialLimitModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-sm transition-all cursor-pointer"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                <span>
+                  {lang === 'ar'
+                    ? 'طلب تفعيل النسخة الكاملة للمنشأة'
+                    : 'Get Full Company License'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsProspectBannerDismissed(true)}
+                className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title={lang === 'ar' ? 'إخفاء الشريط' : 'Dismiss banner'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Row 0: Commercial License & User Status Bar */}
         <div className="bg-[#090D16] border-b border-slate-800/80 px-3 sm:px-5 py-2 text-xs flex flex-wrap items-center justify-between gap-2.5 z-40 shrink-0 text-slate-300">
           {/* User Profile & Plan Badge */}
@@ -3410,24 +3561,78 @@ export function App() {
           onContinueAsGuest={handleContinueAsGuest}
         />
 
-        {/* Commercial Trial Limit & Upgrade Modal */}
+        {/* Commercial Trial Limit & White-Label Showcase Modal */}
         <TrialLimitModal
           isOpen={isTrialLimitModalOpen}
           onClose={() => setIsTrialLimitModalOpen(false)}
           invoicesGenerated={invoicesGenerated}
           maxInvoices={maxTrialInvoices}
           userEmail={currentUser?.email || undefined}
+          lang={lang}
+          prospectName={prospectCompanyName}
+        />
+
+        {/* Founder 1-Click Prospect Demo Link Generator Modal */}
+        <ProspectLinkGenerator
+          isOpen={isProspectGeneratorOpen}
+          onClose={() => setIsProspectGeneratorOpen(false)}
+          lang={lang}
+          onApplyLocally={(cfg) => {
+            setProspectCompanyName(cfg.prospect);
+            setIsProspectBannerDismissed(false);
+            setLang(cfg.lang);
+            setSeller((prev) => ({
+              ...prev,
+              arabicName: cfg.prospect,
+              englishName: cfg.prospect,
+              jurisdiction: cfg.market,
+              templateStyle: cfg.template,
+              primaryColor: cfg.color,
+            }));
+            const mCfg = getMarketConfig(cfg.market);
+            setInvoice((prev) => ({
+              ...prev,
+              jurisdiction: cfg.market,
+              vatRate: mCfg.defaultVatRate,
+            }));
+            showToast(
+              cfg.lang === 'ar'
+                ? `تم تفعيل المعاينة المخصصة لـ "${cfg.prospect}"`
+                : `Activated live custom preview for "${cfg.prospect}"`
+            );
+          }}
         />
 
         {/* Global SaaS Platform Footer */}
-        <footer className="no-print bg-[#0F172A] border-t border-slate-800 text-slate-400 text-xs py-2 px-4 flex flex-col sm:flex-row items-center justify-between gap-1.5 shrink-0 z-20">
-          <div className="flex items-center gap-2 font-medium">
+        <footer className="no-print bg-[#0F172A] border-t border-slate-800 text-slate-400 text-xs py-2 px-4 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0 z-20">
+          <div className="flex items-center gap-2 font-medium flex-wrap">
             <span className="font-extrabold text-white">InvoCore</span>
             <span className="text-slate-600">|</span>
-            <span>منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)</span>
+            <span>
+              {lang === 'ar'
+                ? 'منصة الفوترة الإلكترونية الذكية للمنشآت (B2B)'
+                : 'Smart B2B E-Invoicing & Receipt Voucher Platform'}
+            </span>
           </div>
-          <div className="text-slate-400 font-mono text-[11px]" dir="ltr">
-            © 2026 InvoCore. All rights reserved.
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsProspectGeneratorOpen(true)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-teal-300 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+              title="Outreach Link Builder (Shift + Alt + D)"
+            >
+              <Link2 className="w-3 h-3 text-teal-400" />
+              <span>
+                {lang === 'ar'
+                  ? 'مولد روابط العملاء'
+                  : 'Outreach Link Builder'}
+              </span>
+            </button>
+
+            <div className="text-slate-400 font-mono text-[11px]" dir="ltr">
+              © 2026 InvoCore. All rights reserved.
+            </div>
           </div>
         </footer>
       </div>
