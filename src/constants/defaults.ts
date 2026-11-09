@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   SELLER_INFO: 'saas_company_settings_v1',
   SAVED_CLIENTS: 'saas_clients',
   ONBOARDING_COMPLETED: 'saas_onboarding_completed',
+  ACTIVE_DRAFT: 'invocore_active_draft',
 } as const;
 
 export const INITIAL_INVOICE_NUMBER = 1001;

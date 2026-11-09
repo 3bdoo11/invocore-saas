@@ -353,10 +353,10 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="p-1.5 border border-slate-200 rounded-xl bg-white shadow-xs">
+                  <div className="p-2 border border-slate-200 rounded-lg bg-white shadow-xs shrink-0">
                     <SafeQRCode
                       value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
-                      size={64}
+                      size={105}
                       level="L"
                       includeMargin={false}
                     />
@@ -603,7 +603,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
               <div className="pt-3 border-t-2 border-slate-900">
                 <div className="grid grid-cols-12 gap-3 text-xs">
                   {/* Box 1: Receiver */}
-                  <div className="col-span-4 border border-slate-800 p-2 text-center flex flex-col justify-between h-24">
+                  <div className="col-span-4 border border-slate-800 p-2.5 text-center flex flex-col justify-between min-h-[128px]">
                     <div className="font-bold text-slate-800 border-b border-slate-300 pb-1">
                       {isAr ? 'توقيع المستلم (Receiver)' : 'Receiver Signature'}
                     </div>
@@ -611,7 +611,7 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                   </div>
 
                   {/* Box 2: Accountant */}
-                  <div className="col-span-4 border border-slate-800 p-2 text-center flex flex-col justify-between h-24">
+                  <div className="col-span-4 border border-slate-800 p-2.5 text-center flex flex-col justify-between min-h-[128px]">
                     <div className="font-bold text-slate-800 border-b border-slate-300 pb-1">
                       {isAr ? 'المحاسب المالي (Accountant)' : 'Finance / Accountant'}
                     </div>
@@ -619,14 +619,14 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
                   </div>
 
                   {/* Box 3: Official Stamp & QR */}
-                  <div className="col-span-4 border-2 border-dashed border-slate-800 p-1 text-center flex items-center justify-between h-24 bg-slate-50/50">
+                  <div className="col-span-4 border-2 border-dashed border-slate-800 p-2 text-center flex items-center justify-between min-h-[128px] bg-slate-50/50 gap-2">
                     <div className="flex-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       {isAr ? 'الختم الرسمي للمنشأة' : 'Official Seal'}
                     </div>
-                    <div className="shrink-0 p-0.5 bg-white border border-slate-300">
+                    <div className="shrink-0 p-2 bg-white border border-slate-200 rounded-lg shadow-2xs">
                       <SafeQRCode
                         value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
-                        size={56}
+                        size={105}
                         level="L"
                         includeMargin={false}
                       />
@@ -819,14 +819,14 @@ export const UniversalInvoice: React.FC<UniversalInvoiceProps> = ({
             </div>
 
             {/* 5. Minimalist Discreet Footer */}
-            <footer className="pt-6 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+            <footer className="pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
               <div>
                 <span>{seller.arabicName || seller.englishName}</span> • <span>E-Invoice Compliance</span>
               </div>
-              <div className="opacity-75">
+              <div className="p-2 bg-white border border-slate-200 rounded-lg shadow-2xs shrink-0">
                 <SafeQRCode
                   value={invoice.qrMode === 'zatca' ? zatcaQrBase64 : publicUrl}
-                  size={48}
+                  size={105}
                   level="L"
                   includeMargin={false}
                 />

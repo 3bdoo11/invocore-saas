@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-11-09T04:19:15.749Z",
-  "total": 12,
-  "passed": 12,
+  "timestamp": "2026-11-09T21:15:25.503Z",
+  "total": 17,
+  "passed": 17,
   "failed": 0,
   "testResults": [
     {
@@ -58,6 +58,31 @@
       "name": "Public Client Viewer Lossless QR Decoding",
       "passed": true,
       "details": "Public invoice page rendered"
+    },
+    {
+      "name": "Active Draft Auto-Save & Logo Click Page Reload Persistence",
+      "passed": true,
+      "details": "Restored Client: \"شركة اختبار الحفظ التلقائي للمسودة\""
+    },
+    {
+      "name": "View Mode Switcher & Tab Navigation from Preview Mode",
+      "passed": true,
+      "details": "No 50% Button: true, Settings Opened from Preview: true"
+    },
+    {
+      "name": "Top Navbar Prospect Link Builder & URL Personalization (?prospect=...)",
+      "passed": true,
+      "details": "Banner: true, EGY 14%: true, Navbar Generator: true"
+    },
+    {
+      "name": "Enlarged 105px x 105px QR Code Verification",
+      "passed": true,
+      "details": "105px QR SVG rendered: true"
+    },
+    {
+      "name": "White-Label Showcase Modal Buttons (Inline Quote Form, Email Copy Toast, WhatsApp & Portfolio Links)",
+      "passed": true,
+      "details": "Inline Form: true, Email Toast: true, Portfolio: true, WhatsApp: true"
     },
     {
       "name": "Zero Runtime Console / Page Errors",

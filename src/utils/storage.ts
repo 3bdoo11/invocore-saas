@@ -6,7 +6,13 @@ import {
   INITIAL_INVOICE_NUMBER,
   STORAGE_KEYS,
 } from '../constants/defaults';
-import { CatalogItem, InvoiceData, SavedClient, SellerInfo } from '../types/invoice';
+import {
+  CatalogItem,
+  DocumentPrintView,
+  InvoiceData,
+  SavedClient,
+  SellerInfo,
+} from '../types/invoice';
 import {
   generateId,
   getCurrentTimeString,
@@ -207,3 +213,63 @@ export function saveSavedClientsToStorage(clients: SavedClient[]): void {
     // Ignore quota errors
   }
 }
+
+export interface ActiveDraftState {
+  invoice: InvoiceData;
+  docPrintView?: DocumentPrintView;
+  updatedAt?: number;
+}
+
+export function loadActiveDraftFromStorage(): ActiveDraftState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_DRAFT);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.invoice &&
+      Array.isArray(parsed.invoice.items) &&
+      parsed.invoice.items.length > 0
+    ) {
+      return {
+        invoice: {
+          ...parsed.invoice,
+          discountType: parsed.invoice.discountType || 'amount',
+          vatRate:
+            parsed.invoice.vatRate !== undefined ? parsed.invoice.vatRate : 15,
+        },
+        docPrintView: parsed.docPrintView || 'invoice',
+        updatedAt: parsed.updatedAt || Date.now(),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveActiveDraftToStorage(
+  invoice: InvoiceData,
+  docPrintView: DocumentPrintView = 'invoice'
+): void {
+  try {
+    const payload: ActiveDraftState = {
+      invoice,
+      docPrintView,
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_DRAFT, JSON.stringify(payload));
+  } catch {
+    // Ignore storage quota errors gracefully
+  }
+}
+
+export function clearActiveDraftFromStorage(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_DRAFT);
+  } catch {
+    // Ignore
+  }
+}
+

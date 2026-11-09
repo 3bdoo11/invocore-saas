@@ -400,6 +400,192 @@ async function runTests() {
       record('Public Client Viewer Lossless QR Decoding', clientPageMetrics.isPublicView, 'Public invoice page rendered');
     }
 
+    // =========================================================================
+    // Test 8: Active Draft Auto-Save (invocore_active_draft) & Logo Click Reload
+    // =========================================================================
+    console.log('\n--- Test 8: Active Draft Auto-Save & Logo Click Reload Persistence ---');
+    await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
+    await page.evaluate(() => {
+      if (window.__invocoreSetInvoice) {
+        window.__invocoreSetInvoice({
+          client: {
+            name: 'شركة اختبار الحفظ التلقائي للمسودة',
+            taxNumber: '310123456700003',
+            phone: '0551122334',
+            address: 'الرياض',
+            notes: '',
+          },
+        });
+      }
+    });
+    await new Promise((r) => setTimeout(r, 200));
+
+    // Click the top navbar InvoCore brand logo (triggers save + window.location.reload())
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      page.evaluate(() => {
+        const logoBtn = document.querySelector('header button');
+        if (logoBtn) logoBtn.click();
+      }),
+    ]);
+
+    const draftAfterReload = await page.evaluate(() => {
+      const rawDraft = localStorage.getItem('invocore_active_draft');
+      const parsed = rawDraft ? JSON.parse(rawDraft) : null;
+      return {
+        savedClientName: parsed?.invoice?.client?.name || '',
+        bodyHasClient: document.body.innerText.includes('شركة اختبار الحفظ التلقائي للمسودة'),
+      };
+    });
+
+    record(
+      'Active Draft Auto-Save & Logo Click Page Reload Persistence',
+      draftAfterReload.savedClientName === 'شركة اختبار الحفظ التلقائي للمسودة' &&
+        draftAfterReload.bodyHasClient,
+      `Restored Client: "${draftAfterReload.savedClientName}"`
+    );
+
+    // =========================================================================
+    // Test 9: View Mode Switcher & Universal Tab Navigation from Preview Only
+    // =========================================================================
+    console.log('\n--- Test 9: View Mode Switcher & Tab Navigation in All Modes ---');
+    const viewModeCheck = await page.evaluate(async () => {
+      const noRedundant50 = !document.body.innerText.includes('واسع 50%');
+
+      // Switch to Preview Only mode ("الفاتورة")
+      const allBtns = Array.from(document.querySelectorAll('button'));
+      const previewOnlyBtn = allBtns.find(
+        (b) => b.getAttribute('title')?.includes('معاينة الفاتورة فقط') || b.getAttribute('title')?.includes('Preview Only')
+      );
+      if (previewOnlyBtn) previewOnlyBtn.click();
+      await new Promise((r) => setTimeout(r, 150));
+
+      // Now click the KSA • SAR 15% badge in the top navbar while in Preview Only mode
+      const jurBtn = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.getAttribute('title')?.includes('تعديل سوق العمل') || b.getAttribute('title')?.includes('Edit tax jurisdiction')
+      );
+      if (jurBtn) jurBtn.click();
+      await new Promise((r) => setTimeout(r, 200));
+
+      const settingsOpened =
+        document.body.innerText.includes('إعدادات المنشأة والهوية البصرية') ||
+        document.body.innerText.includes('Company Settings & Brand Identity');
+
+      return { noRedundant50, settingsOpened };
+    });
+
+    record(
+      'View Mode Switcher & Tab Navigation from Preview Mode',
+      viewModeCheck.noRedundant50 && viewModeCheck.settingsOpened,
+      `No 50% Button: ${viewModeCheck.noRedundant50}, Settings Opened from Preview: ${viewModeCheck.settingsOpened}`
+    );
+
+    // =========================================================================
+    // Test 10: Top Navbar Prospect Link Builder & URL Prospect Personalization
+    // =========================================================================
+    console.log('\n--- Test 10: Top Navbar Prospect Link Builder & URL Personalization ---');
+    await page.goto(
+      `http://localhost:${PORT}/?prospect=Horizon_Contracting_EGY&market=EGY&template=classic&lang=ar`,
+      { waitUntil: 'networkidle0' }
+    );
+
+    const prospectMetrics = await page.evaluate(async () => {
+      const bodyText = document.body.innerText;
+      const hasBanner = bodyText.includes('نسخة عرض مخصصة لـ') && bodyText.includes('Horizon_Contracting_EGY');
+      const hasEgyMarket = bodyText.includes('EGY') && bodyText.includes('14%');
+      const qrSvgs = Array.from(document.querySelectorAll('.invoice-a4-page svg[width="105"]'));
+      const has105Qr = qrSvgs.length >= 1;
+
+      // Open Prospect Link Generator from Top Navbar button
+      const navProspectBtn = Array.from(document.querySelectorAll('button')).find(
+        (b) => b.innerText.includes('مولد روابط العملاء') || b.innerText.includes('Prospect Link')
+      );
+      if (navProspectBtn) navProspectBtn.click();
+      await new Promise((r) => setTimeout(r, 150));
+
+      const generatorOpened =
+        document.body.innerText.includes('Outreach Link Builder') ||
+        document.body.innerText.includes('B2B Prospect Demo Link Generator');
+
+      return { hasBanner, hasEgyMarket, has105Qr, generatorOpened };
+    });
+
+    record(
+      'Top Navbar Prospect Link Builder & URL Personalization (?prospect=...)',
+      prospectMetrics.hasBanner && prospectMetrics.hasEgyMarket && prospectMetrics.generatorOpened,
+      `Banner: ${prospectMetrics.hasBanner}, EGY 14%: ${prospectMetrics.hasEgyMarket}, Navbar Generator: ${prospectMetrics.generatorOpened}`
+    );
+
+    record(
+      'Enlarged 105px x 105px QR Code Verification',
+      prospectMetrics.has105Qr,
+      `105px QR SVG rendered: ${prospectMetrics.has105Qr}`
+    );
+
+    // =========================================================================
+    // Test 11: White-Label Showcase Modal Interactive Actions (Zero Dead Buttons)
+    // =========================================================================
+    console.log('\n--- Test 11: White-Label Showcase Modal Interactive Actions ---');
+    await page.goto(`http://localhost:${PORT}/?prospect=Horizon_Contracting_EGY`, {
+      waitUntil: 'networkidle0',
+    });
+
+    const modalCheck = await page.evaluate(async () => {
+      // Click "طلب تفعيل النسخة الكاملة للمنشأة" in the top prospect banner
+      const openLicenseBtn = Array.from(document.querySelectorAll('button')).find(
+        (b) =>
+          b.innerText.includes('طلب تفعيل النسخة الكاملة للمنشأة') ||
+          b.innerText.includes('Get Full Company License')
+      );
+      if (openLicenseBtn) openLicenseBtn.click();
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Click "اطلب عرض سعر لنسخة خاصة White-Label"
+      const quoteBtn = Array.from(document.querySelectorAll('button')).find(
+        (b) =>
+          b.innerText.includes('اطلب عرض سعر لنسخة خاصة') ||
+          b.innerText.includes('Request White-Label Quote')
+      );
+      if (quoteBtn) quoteBtn.click();
+      await new Promise((r) => setTimeout(r, 150));
+
+      const inlineFormVisible =
+        document.body.innerText.includes('نموذج طلب عرض سعر النسخة الخاصة') ||
+        document.body.innerText.includes('Quick Request: Custom White-Label');
+
+      // Click "بريد إلكتروني رسمي"
+      const emailBtn = Array.from(document.querySelectorAll('button')).find(
+        (b) =>
+          b.innerText.includes('بريد إلكتروني رسمي') ||
+          b.innerText.includes('Official Email')
+      );
+      if (emailBtn) emailBtn.click();
+      await new Promise((r) => setTimeout(r, 150));
+
+      const emailToastVisible =
+        document.body.innerText.includes('تم نسخ البريد الإلكتروني: abdallahmohamedama12@gmail.com') ||
+        document.body.innerText.includes('Official Email Copied: abdallahmohamedama12@gmail.com');
+
+      const portfolioLink = document.querySelector('a[href*="abdallah-portfolio-the.vercel.app"]');
+      const whatsappLink = document.querySelector('a[href*="wa.me/201062075574"]');
+
+      return {
+        inlineFormVisible,
+        emailToastVisible,
+        hasPortfolioLink: !!portfolioLink,
+        hasWhatsappLink: !!whatsappLink,
+      };
+    });
+
+    record(
+      'White-Label Showcase Modal Buttons (Inline Quote Form, Email Copy Toast, WhatsApp & Portfolio Links)',
+      modalCheck.inlineFormVisible &&
+        modalCheck.emailToastVisible &&
+        modalCheck.hasPortfolioLink &&
+        modalCheck.hasWhatsappLink,
+      `Inline Form: ${modalCheck.inlineFormVisible}, Email Toast: ${modalCheck.emailToastVisible}, Portfolio: ${modalCheck.hasPortfolioLink}, WhatsApp: ${modalCheck.hasWhatsappLink}`
+    );
+
     if (pageErrors.length > 0) {
       console.log('Recorded page errors:', pageErrors);
     }

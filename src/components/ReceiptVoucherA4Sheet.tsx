@@ -391,8 +391,8 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
                 {isAr ? seller.arabicName : seller.englishName || seller.arabicName}
               </div>
             </div>
-            <div className="p-1 border border-slate-200 rounded-xl bg-white shadow-xs">
-              <SafeQRCode value={publicUrl} size={64} level="L" includeMargin={false} />
+            <div className="p-2 border border-slate-200 rounded-lg bg-white shadow-xs shrink-0">
+              <SafeQRCode value={publicUrl} size={105} level="L" includeMargin={false} />
             </div>
           </div>
         </footer>
@@ -613,7 +613,7 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
         <div className="border-t-2 border-slate-900 pt-3">
           <div className="grid grid-cols-12 gap-2">
             {/* Box 1: Receiver / Cashier */}
-            <div className="col-span-4 border-2 border-slate-900 p-2 text-center h-24 flex flex-col justify-between">
+            <div className="col-span-4 border-2 border-slate-900 p-2.5 text-center min-h-[128px] flex flex-col justify-between">
               <div className="text-[10px] font-black uppercase text-slate-700">
                 {isAr ? 'المستلم / أمين الصندوق' : 'Receiver / Cashier'}
               </div>
@@ -626,7 +626,7 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
             </div>
 
             {/* Box 2: Certified Accountant */}
-            <div className="col-span-4 border-2 border-slate-900 p-2 text-center h-24 flex flex-col justify-between">
+            <div className="col-span-4 border-2 border-slate-900 p-2.5 text-center min-h-[128px] flex flex-col justify-between">
               <div className="text-[10px] font-black uppercase text-slate-700">
                 {isAr ? 'المحاسب المالي' : 'Accountant'}
               </div>
@@ -639,12 +639,12 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
             </div>
 
             {/* Box 3: Official Seal & QR */}
-            <div className="col-span-4 border-2 border-dashed border-slate-900 p-1 text-center flex items-center justify-between h-24 bg-slate-50/50">
+            <div className="col-span-4 border-2 border-dashed border-slate-900 p-2 text-center flex items-center justify-between min-h-[128px] bg-slate-50/50 gap-2">
               <div className="flex-1 text-[10px] font-black text-slate-600 uppercase tracking-wider">
                 {isAr ? 'الختم الرسمي للمنشأة' : 'Official Seal'}
               </div>
-              <div className="shrink-0 p-0.5 bg-white border border-slate-900">
-                <SafeQRCode value={publicUrl} size={54} level="L" includeMargin={false} />
+              <div className="shrink-0 p-2 bg-white border border-slate-200 rounded-lg shadow-2xs">
+                <SafeQRCode value={publicUrl} size={105} level="L" includeMargin={false} />
               </div>
             </div>
           </div>
@@ -844,8 +844,8 @@ export const ReceiptVoucherA4Sheet: React.FC<ReceiptVoucherA4SheetProps> = ({
             <div>#{receiptNumber}</div>
             <div>{receiptDate}</div>
           </div>
-          <div className="p-1 border border-slate-200 rounded-sm bg-white">
-            <SafeQRCode value={publicUrl} size={48} level="L" includeMargin={false} />
+          <div className="p-2 border border-slate-200 rounded-lg bg-white shadow-2xs shrink-0">
+            <SafeQRCode value={publicUrl} size={105} level="L" includeMargin={false} />
           </div>
         </div>
       </footer>

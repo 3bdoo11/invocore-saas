@@ -82,12 +82,15 @@ import {
   buildWhatsAppInvoiceMessage,
 } from './utils/formatters';
 import {
+  clearActiveDraftFromStorage,
   createFreshBlankInvoice,
+  loadActiveDraftFromStorage,
   loadCatalogFromStorage,
   loadInvoicesFromStorage,
   loadNextInvoiceNumber,
   loadSavedClientsFromStorage,
   loadSellerFromStorage,
+  saveActiveDraftToStorage,
   saveCatalogToStorage,
   saveInvoicesToStorage,
   saveNextInvoiceNumber,
@@ -270,20 +273,23 @@ export function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
 
   const [invoice, setInvoice] = useState<InvoiceData>(() => {
+    const existingDraft = loadActiveDraftFromStorage();
     const existing = loadInvoicesFromStorage();
     const startNo =
       existing.length === 0 ? INITIAL_INVOICE_NUMBER : loadNextInvoiceNumber();
-    const fresh = createFreshBlankInvoice(startNo);
+    const baseInvoice = existingDraft
+      ? existingDraft.invoice
+      : createFreshBlankInvoice(startNo);
     const p = parseUrlProspectParams();
     if (p.market) {
       const mCfg = getMarketConfig(p.market);
       return {
-        ...fresh,
+        ...baseInvoice,
         jurisdiction: p.market,
         vatRate: mCfg.defaultVatRate,
       };
     }
-    return fresh;
+    return baseInvoice;
   });
 
   // Saved Clients Directory ("دفتر العملاء المحفوظين")
@@ -293,8 +299,16 @@ export function App() {
   const [selectedSavedClientId, setSelectedSavedClientId] = useState<string>('');
 
   // Document View / Print Mode ('invoice' | 'receipt' | 'both')
-  const [docPrintView, setDocPrintView] =
-    useState<DocumentPrintView>('invoice');
+  const [docPrintView, setDocPrintView] = useState<DocumentPrintView>(() => {
+    const existingDraft = loadActiveDraftFromStorage();
+    return existingDraft?.docPrintView || 'invoice';
+  });
+
+  // Auto-Save Active Draft to localStorage ('invocore_active_draft') on every change
+  useEffect(() => {
+    if (publicInvoiceParam !== null) return;
+    saveActiveDraftToStorage(invoice, docPrintView);
+  }, [invoice, docPrintView, publicInvoiceParam]);
 
   // --- 100% Arabic & English Bidirectional Localization Engine ---
   const [lang, setLang] = useState<Language>(() => {
@@ -739,17 +753,27 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const handleNavigateToTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    if (desktopLayoutMode === 'preview') {
+      setDesktopLayoutMode('split');
+    }
+    if (mobilePane === 'preview') {
+      setMobilePane('controls');
+    }
+  };
+
   const handleBrandLogoClick = () => {
-    setIsAuthModalOpen(false);
-    setIsTrialLimitModalOpen(false);
-    setIsSellerModalOpen(false);
-    setShareModal(null);
-    setShowZatcaInspector(false);
-    setIsOnboardingOpen(false);
+    saveActiveDraftToStorage(invoice, 'invoice');
+    saveSellerToStorage(seller);
+    try {
+      localStorage.setItem('invocore_desktop_layout_mode', 'split');
+      localStorage.setItem('saqr_desktop_layout_mode', 'split');
+    } catch {}
     setActiveTab('editor');
     setDocPrintView('invoice');
     if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.location.reload();
     }
   };
 
@@ -1463,13 +1487,25 @@ export function App() {
     setNextInvoiceNo(suggestedNext);
     saveNextInvoiceNumber(suggestedNext);
 
-    const fresh = createFreshBlankInvoice(suggestedNext, invoice.qrMode);
+    const freshBase = createFreshBlankInvoice(suggestedNext, invoice.qrMode);
+    const activeJur = seller.jurisdiction || invoice.jurisdiction || 'KSA';
+    const mCfg = getMarketConfig(activeJur);
+    const fresh: InvoiceData = {
+      ...freshBase,
+      jurisdiction: activeJur,
+      vatRate: mCfg.defaultVatRate,
+    };
+    clearActiveDraftFromStorage();
+    saveActiveDraftToStorage(fresh, 'invoice');
     setInvoice(fresh);
+    setDocPrintView('invoice');
     setCurrentPage(1);
     setJustIssuedBanner(false);
-    setActiveTab('editor');
+    handleNavigateToTab('editor');
     showToast(
-      `تم فتح فاتورة جديدة فارغة (يمكنك كتابة رقم الفاتورة يدوياً بحرية)`
+      lang === 'ar'
+        ? `تم فتح فاتورة جديدة فارغة (يمكنك كتابة رقم الفاتورة يدوياً بحرية)`
+        : `Opened a fresh blank invoice (#${suggestedNext})`
     );
   };
 
@@ -1592,11 +1628,11 @@ export function App() {
           </div>
 
           {/* Action Pod */}
-          <div className="flex items-center gap-2">
-            {/* Active Tax Jurisdiction Badge / Switcher (Opens Settings) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Active Tax Jurisdiction Badge / Switcher (Opens Settings in Any View Mode) */}
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleNavigateToTab('settings')}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors cursor-pointer group"
               title={lang === 'ar' ? 'تعديل سوق العمل والامتثال الضريبي في إعدادات المنشأة' : 'Edit tax jurisdiction in Company Settings'}
             >
@@ -1606,6 +1642,17 @@ export function App() {
               <span className="text-slate-300 text-[11px] font-medium">{marketConfig.currencyCode}</span>
               <span className="text-slate-400 text-[11px]">{totals.vatRate}%</span>
               <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-colors" />
+            </button>
+
+            {/* Prominent Top Navbar Prospect Link Builder Button */}
+            <button
+              type="button"
+              onClick={() => setIsProspectGeneratorOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-teal-300 border border-teal-500/30 transition-colors cursor-pointer"
+              title={lang === 'ar' ? 'مولد روابط العروض المخصصة للعملاء (Shift + Alt + D)' : 'Prospect Demo Link Builder (Shift + Alt + D)'}
+            >
+              <Link2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+              <span>{lang === 'ar' ? 'مولد روابط العملاء' : 'Prospect Link'}</span>
             </button>
 
             {/* Global Language Switcher */}
@@ -1656,12 +1703,12 @@ export function App() {
           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between w-full min-w-0 gap-2.5">
             {/* RIGHT POD: Clickable Platform Brand & Active Company Identity Pill */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 w-full lg:w-auto min-w-0">
-              {/* Interactive InvoCore Logo Button */}
+              {/* Interactive InvoCore Logo Button (Saves Draft & Reloads Workspace) */}
               <button
                 type="button"
                 onClick={handleBrandLogoClick}
                 className="flex items-center gap-3 text-right min-w-0 w-full lg:w-auto cursor-pointer group text-left transition-opacity hover:opacity-95 focus:outline-none"
-                title={lang === 'ar' ? 'الرجوع إلى لوحة إنشاء الفاتورة الرئيسية' : 'Return to main Invoice Generator'}
+                title={lang === 'ar' ? 'حفظ المسودة الحالية وتحديث مساحة العمل الرئيسية' : 'Save active draft & reload main Invoice Workspace'}
               >
                 <div className="transition-transform group-hover:scale-105">
                   <InvoCoreLogo size={36} variant="light" />
@@ -1705,7 +1752,7 @@ export function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => handleNavigateToTab('settings')}
                   className="text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-md transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
                   title={lang === 'ar' ? 'تخصيص بيانات المنشأة والشعار والألوان' : 'Customize company branding & logo'}
                 >
@@ -1771,9 +1818,9 @@ export function App() {
                 )}
               </div>
 
-              {/* Divider + Desktop View Mode Switcher */}
-              <div className="hidden xl:block w-[1px] h-5 bg-slate-800 mx-0.5" />
-              <div className="hidden xl:inline-flex items-center gap-1 bg-slate-900/60 p-0.5 rounded-lg border border-slate-800">
+              {/* Divider + Desktop 3-Mode View Switcher */}
+              <div className="hidden lg:block w-[1px] h-5 bg-slate-800 mx-0.5" />
+              <div className="hidden lg:inline-flex items-center gap-1 bg-slate-900/60 p-0.5 rounded-lg border border-slate-800">
                 <button
                   type="button"
                   onClick={() => setDesktopLayoutMode('split')}
@@ -1794,9 +1841,9 @@ export function App() {
                       ? 'bg-slate-800 text-teal-400 border border-slate-700 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
-                  title={lang === 'ar' ? 'عرض نموذج البيانات فقط بملء الشاشة' : 'Form Only View'}
+                  title={lang === 'ar' ? 'عرض نموذج البيانات فقط بملء الشاشة' : 'Data Entry View'}
                 >
-                  {lang === 'ar' ? 'البيانات' : 'Form Only'}
+                  {lang === 'ar' ? 'البيانات' : 'Data Entry'}
                 </button>
                 <button
                   type="button"
@@ -1916,68 +1963,44 @@ export function App() {
                   : 'lg:flex lg:w-[var(--panel-w)]'
             }`}
           >
-            {/* Desktop Quick Width Presets & Mode Bar */}
+            {/* Clean 3-Mode View Switcher Bar (Zero Redundant 50% Preset) */}
             <div className="hidden lg:flex items-center justify-between px-4 py-1.5 bg-slate-100 border-b border-slate-200 text-[11px]">
               <div className="flex items-center gap-1.5 text-slate-600 font-bold">
-                <span>{lang === 'ar' ? 'عرض لوحة الإدخال:' : 'Form Width:'}</span>
-                {desktopLayoutMode === 'split' && (
-                  <span className="num-tabular text-[10.5px] text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
-                    {Math.round(panelWidth)}px
-                  </span>
-                )}
+                <span>{lang === 'ar' ? 'وضع العرض النشط:' : 'Active View Mode:'}</span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setDesktopLayoutMode('split');
-                    setPanelWidth(DEFAULT_PANEL_WIDTH);
-                  }}
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
-                    desktopLayoutMode === 'split' &&
-                    Math.abs(panelWidth - DEFAULT_PANEL_WIDTH) < 20
+                  onClick={() => setDesktopLayoutMode('split')}
+                  className={`px-2.5 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
+                    desktopLayoutMode === 'split'
                       ? 'bg-slate-900 text-teal-400'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
-                  {lang === 'ar' ? 'قياسي (540px)' : 'Standard (540px)'}
+                  {lang === 'ar' ? 'تقسيم الشاشة' : 'Split View'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setDesktopLayoutMode('split');
-                    setPanelWidth(
-                      Math.max(
-                        MIN_PANEL_WIDTH,
-                        Math.round(window.innerWidth * 0.5)
-                      )
-                    );
-                  }}
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
-                    desktopLayoutMode === 'split' &&
-                    Math.abs(panelWidth - window.innerWidth * 0.5) <= 20
-                      ? 'bg-slate-900 text-teal-400'
-                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                  }`}
-                >
-                  {lang === 'ar' ? 'واسع 50%' : 'Wide 50%'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDesktopLayoutMode((prev) =>
-                      prev === 'input' ? 'split' : 'input'
-                    )
-                  }
-                  className={`px-2 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
+                  onClick={() => setDesktopLayoutMode('input')}
+                  className={`px-2.5 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
                     desktopLayoutMode === 'input'
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-slate-900 text-teal-400'
                       : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
-                  {desktopLayoutMode === 'input'
-                    ? (lang === 'ar' ? 'العودة لتقسيم الشاشة' : 'Exit Fullscreen')
-                    : (lang === 'ar' ? 'ملء الشاشة' : 'Fullscreen')}
+                  {lang === 'ar' ? 'البيانات' : 'Data Entry'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopLayoutMode('preview')}
+                  className={`px-2.5 py-0.5 rounded font-extrabold transition-colors cursor-pointer ${
+                    desktopLayoutMode === 'preview'
+                      ? 'bg-slate-900 text-teal-400'
+                      : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
+                  }`}
+                >
+                  {lang === 'ar' ? 'الفاتورة' : 'Preview Only'}
                 </button>
               </div>
             </div>
@@ -1991,7 +2014,7 @@ export function App() {
               >
                 <button
                   type="button"
-                  onClick={() => setActiveTab('editor')}
+                  onClick={() => handleNavigateToTab('editor')}
                   className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'editor'
                       ? 'bg-slate-900 text-white shadow-2xs'
@@ -2004,7 +2027,7 @@ export function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('catalog')}
+                  onClick={() => handleNavigateToTab('catalog')}
                   className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'catalog'
                       ? 'bg-slate-900 text-white shadow-2xs'
@@ -2020,7 +2043,7 @@ export function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('history')}
+                  onClick={() => handleNavigateToTab('history')}
                   className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'history'
                       ? 'bg-slate-900 text-white shadow-2xs'
@@ -2036,7 +2059,7 @@ export function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => handleNavigateToTab('settings')}
                   className={`min-w-0 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'settings'
                       ? 'bg-slate-900 text-white shadow-2xs'
@@ -3291,13 +3314,24 @@ export function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('settings')}
+                  onClick={() => handleNavigateToTab('settings')}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all cursor-pointer shrink-0"
                   title={lang === 'ar' ? 'تعديل الهوية وإعدادات المنشأة' : 'Company & Tax Settings'}
                 >
                   <Building2 className="w-3.5 h-3.5 text-teal-600" />
                   <span>{lang === 'ar' ? 'إعدادات المنشأة والضريبة' : 'Company & Tax Settings'}</span>
                 </button>
+
+                {desktopLayoutMode === 'preview' && (
+                  <button
+                    type="button"
+                    onClick={() => setDesktopLayoutMode('split')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-2xs transition-all cursor-pointer shrink-0"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-teal-400" />
+                    <span>{lang === 'ar' ? 'إظهار لوحة الإدخال' : 'Show Data Panel'}</span>
+                  </button>
+                )}
               </div>
 
               {/* Left/Center: Page Navigation (السابق | صفحة X من Y | التالي) + Zoom Controls (100% | ملائمة) */}
